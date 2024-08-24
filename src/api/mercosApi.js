@@ -1,5 +1,4 @@
 const axios = require("axios");
-const { response } = require("../app");
 const base_url = "https://sandbox.mercos.com/api/";
 
 const MERCOS_APPLICATION_TOKEN = String(process.env.MERCOS_APPLICATION_TOKEN);

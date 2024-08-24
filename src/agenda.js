@@ -4,6 +4,8 @@ const nodeSchedule = require("node-schedule");
 const categoriaController = require("./controller/categoriaController");
 const produtoController = require("./controller/produtoController");
 const diversosController = require("./controller/diversosController");
+const transportadoraController = require("./controller/transportadoraController");
+const pedidoController = require("./controller/pedidoController");
 global.processandoNow = 0;
 
 async function task() {
@@ -17,8 +19,9 @@ async function task() {
 
 async function init() {
   //await categoriaController.init();
+  //await transportadoraController.init();
+  //await pedidoController.init();
   await diversosController.init();
-
   await produtoController.init();
   return;
 

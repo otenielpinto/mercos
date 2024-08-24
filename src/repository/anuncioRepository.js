@@ -15,12 +15,14 @@ class MpkAnuncio {
   async update(id, payload) {
     const result = await this.db
       .collection(collection)
-      .updateOne({ id: id }, { $set: payload }, { upsert: true });
+      .updateOne({ id: Number(id) }, { $set: payload }, { upsert: true });
     return result.modifiedCount > 0;
   }
 
   async delete(id) {
-    const result = await this.db.collection(collection).deleteOne({ id: id });
+    const result = await this.db
+      .collection(collection)
+      .deleteOne({ id: Number(id) });
     return result.deletedCount > 0;
   }
 
@@ -29,7 +31,7 @@ class MpkAnuncio {
   }
 
   async findById(id) {
-    return await this.db.collection(collection).findOne({ id: id });
+    return await this.db.collection(collection).findOne({ id: Number(id) });
   }
 
   async insertMany(items) {
@@ -96,7 +98,6 @@ class MpkAnuncio {
         estoque: Number(item?.estoque),
         preco: Number(item?.preco),
         preco_promocional: Number(item?.preco_promocional),
-        status: 0,
       };
 
       try {

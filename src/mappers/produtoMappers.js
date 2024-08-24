@@ -24,7 +24,7 @@ class ProdutoMappers {
       moeda: MOEDA_ANUNCIO,
       unidade: payload.unidade ? payload.unidade : "UN",
       saldo_estoque: Number(payload.estoque),
-      observacoes: "",
+      observacoes: detalhes_html,
       excluido: false,
       ativo: ativo,
       exibir_no_b2b: ativo,

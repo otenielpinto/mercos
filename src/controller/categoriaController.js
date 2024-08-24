@@ -7,12 +7,12 @@ const CategoriaMappers = require("../mappers/categoriaMappers");
 
 async function init() {
   await setCategorias();
-
   try {
     await getB2bCategorias();
   } finally {
     await setB2bCategorias();
   }
+  return getCategorias();
 }
 
 //public
@@ -44,13 +44,16 @@ async function getB2bCategorias() {
   );
 
   //busco categorias do mercos
+  let result = null;
   try {
-    console.log("Aguardando 10 segundos " + lib.currentDateTimeStr());
-    await lib.sleep(1000 * 10);
-    let { data: items } = await mercosService.getCategorias(null);
+    for (let i = 1; i < 10; i++) {
+      result = await mercosService.getCategorias(null);
+      if (result?.status == 200) break;
+      await lib.sleep(1000 * i);
+    }
+    if (!result) return;
+    let { data: items } = result;
     for (let item of items) {
-      console.log("Validando categorias ->" + item?.nome);
-
       if (item.excluido == true) continue;
       let obj = await categoria.findByDescricao(item?.nome);
       if (!obj) continue;
@@ -59,7 +62,6 @@ async function getB2bCategorias() {
         obj.id_ext = item?.id;
         obj.sync = 1;
         await categoria.update(obj?.id, obj);
-        await lib.sleep(1000 * 3);
       }
     }
   } catch (error) {
@@ -71,21 +73,22 @@ async function setB2bCategorias() {
   const categoria = new TCategoria.CategoriaRepository(
     await TMongo.mongoConnect()
   );
-
+  let result = null;
   let items = await categoria.findAll();
   if (!Array.isArray(items)) return;
 
   for (let item of items) {
     let payload = CategoriaMappers.CategoriaMappers.toMercos(item);
-
+    result = null;
     if (payload?.id === 0) {
       delete payload?.id;
-      let result = await mercosService.createCategorias(
-        JSON.stringify(payload)
-      );
+      for (let i = 1; i < 10; i++) {
+        result = await mercosService.createCategorias(JSON.stringify(payload));
+        if (result?.status == 201) break;
+        await lib.sleep(1000 * i);
+      }
       if (!result) continue;
       let { headers, status } = result;
-      await lib.sleep(1000 * 10);
       if (status == 201) {
         item.id_ext = Number(headers["meuspedidosid"]);
         item.sync = 1;
@@ -95,7 +98,20 @@ async function setB2bCategorias() {
   }
 }
 
+async function doCreate() {
+  //a diferenca que nao faz teste algum se , já executou no dia
+  console.log("Sincronizando todas as categorias");
+  await setCategorias();
+  try {
+    await getB2bCategorias();
+  } finally {
+    await setB2bCategorias();
+  }
+  return getCategorias();
+}
+
 module.exports = {
   init,
+  doCreate,
   getCategorias,
 };

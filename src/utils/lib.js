@@ -257,6 +257,10 @@ function dateBrToIso8601(dataString) {
 //   console.log(d.toLocaleString('pt-BR', { timeZone: tz }));
 // }
 
+function config_id_storage() {
+  return process.env.CONFIG_ID_STORAGE;
+}
+
 function currentDateTimeStr() {
   return new Date().toLocaleString("pt-BR", { hour12: false });
 }
@@ -277,6 +281,7 @@ module.exports = {
   config_modulo_server,
   config_modulo_client,
   config_id_marketplace,
+  config_id_storage,
 
   objectToLowerCase,
   arrayToString,

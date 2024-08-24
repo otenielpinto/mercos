@@ -21,7 +21,7 @@ mercos.patch(url, data);
 */
 
 async function getProdutos(alterado_apos) {
-  if (!alterado_apos) alterado_apos = "alterado_apos=2016-08-26 15:00:09";
+  if (!alterado_apos) alterado_apos = "alterado_apos=2024-01-01 00:00:00";
 
   try {
     let res = await api(`/v1/produtos?${alterado_apos}`, {}, "GET");
@@ -71,7 +71,7 @@ async function ajustar_estoque_em_lote(data) {
     return res;
   } catch (error) {
     console.log(error);
-    return error.response;
+    return error?.response;
   }
 }
 
@@ -372,7 +372,7 @@ async function updateCampos_extras_cliente(id, data) {
 }
 
 async function getCategorias(alterado_apos) {
-  if (!alterado_apos) alterado_apos = "alterado_apos=2016-08-26 15:00:09";
+  if (!alterado_apos) alterado_apos = "alterado_apos=2024-01-01 01:00:00";
   try {
     let res = await api(`v1/categorias?${alterado_apos}`, {}, "GET");
     return res;
@@ -433,6 +433,7 @@ async function getUsuarios_por_id(id) {
 }
 
 async function getTransportadoras(alterado_apos) {
+  if (!alterado_apos) alterado_apos = "alterado_apos=2024-01-01 15:00:00";
   try {
     let res = await api(`v1/transportadoras?${alterado_apos}`, {}, "GET");
     return res;
@@ -526,7 +527,7 @@ async function createClientes_condicoes_pagamento(data) {
 async function updateClientes_condicoes_pagamento_liberar_todas(data) {
   try {
     let res = await api(
-      `v1/clientes_condicoes_pagamento/liberar_todas/${id}`,
+      `v1/clientes_condicoes_pagamento/liberar_todas`,
       data,
       "POST"
     );
@@ -688,7 +689,8 @@ async function getHistoricoStatusPedidos(id) {
   }
 }
 
-async function getPromocoes(alterado_apos) {
+async function getPromocoes(alterado_apos = null) {
+  if (!alterado_apos) alterado_apos = "alterado_apos=2024-01-01 00:00:00";
   try {
     let res = await api(`v1/promocoes?${alterado_apos}`, {}, "GET");
     return res;
@@ -768,7 +770,56 @@ async function updateVariacoes(id, data) {
   }
 }
 
+async function faturarPedido(data) {
+  try {
+    let res = await api(`v1/faturamento`, data, "POST");
+    return res;
+  } catch (error) {
+    console.log(error);
+    return error.response;
+  }
+}
+
+async function alterarFaturamento(id, data) {
+  try {
+    let res = await api(`v1/faturamento/${id}`, data, "PUT");
+    return res;
+  } catch (error) {
+    console.log(error);
+    return error.response;
+  }
+}
+
+async function clientes_tabela_preco(data) {
+  try {
+    let res = await api(`v1/clientes_tabela_preco`, data, "POST");
+    return res;
+  } catch (error) {
+    console.log(error);
+    return error.response;
+  }
+}
+
+async function clientes_tabela_preco_liberar_todas(data) {
+  try {
+    let res = await api(`v1/clientes_tabela_preco/liberar_todas`, data, "POST");
+    return res;
+  } catch (error) {
+    console.log(error);
+    return error.response;
+  }
+}
+
 module.exports = {
+  clientes_tabela_preco,
+  clientes_tabela_preco_liberar_todas,
+
+  faturarPedido,
+  alterarFaturamento,
+
+  createClientes_condicoes_pagamento,
+  updateClientes_condicoes_pagamento_liberar_todas,
+
   getCategorias,
   getCategorias_por_id,
   createCategorias,
