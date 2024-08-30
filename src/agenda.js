@@ -6,6 +6,8 @@ const produtoController = require("./controller/produtoController");
 const diversosController = require("./controller/diversosController");
 const transportadoraController = require("./controller/transportadoraController");
 const pedidoController = require("./controller/pedidoController");
+const clienteController = require("./controller/clienteController");
+
 global.processandoNow = 0;
 
 async function task() {
@@ -18,11 +20,13 @@ async function task() {
 }
 
 async function init() {
-  //await categoriaController.init();
+  await categoriaController.init();
   //await transportadoraController.init();
-  //await pedidoController.init();
+
+  await pedidoController.init();
   await diversosController.init();
   await produtoController.init();
+  await clienteController.init();
   return;
 
   try {

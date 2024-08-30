@@ -1,4 +1,5 @@
 const { v4: uuidv4 } = require("uuid");
+const { Console } = require("winston/lib/winston/transports");
 
 const lista_cfop_venda = [
   5102, 5104, 5106, 5108, 5110, 6102, 5403, 5405, 6403, 6404, 6106, 6108, 6104,
@@ -241,7 +242,14 @@ function dateBrToSql(str) {
   return new Date(ano, mes, dia);
 }
 
-function dateTimeToSql(str) {}
+function dateUSToSql(str) {
+  //format yyyy-mm-dd
+  let partes = str.split("-");
+  let ano = parseInt(partes[0], 10);
+  let mes = parseInt(partes[1], 10) - 1;
+  let dia = parseInt(partes[2], 10);
+  return new Date(ano, mes, dia);
+}
 
 function dateBrToIso8601(dataString) {
   //format dd/mm/yyyy
@@ -256,13 +264,12 @@ function dateBrToIso8601(dataString) {
 // for (const tz of ['America/Sao_Paulo', 'America/Los_Angeles', 'Pacific/Apia', 'UTC']) {
 //   console.log(d.toLocaleString('pt-BR', { timeZone: tz }));
 // }
+function currentDateTimeStr() {
+  return new Date().toLocaleString("pt-BR", { hour12: false });
+}
 
 function config_id_storage() {
   return process.env.CONFIG_ID_STORAGE;
-}
-
-function currentDateTimeStr() {
-  return new Date().toLocaleString("pt-BR", { hour12: false });
 }
 
 function config_modulo_server() {
@@ -272,12 +279,64 @@ function config_modulo_server() {
 function config_modulo_client() {
   return Number(process.env.CONFIG_MODULO_CLIENT);
 }
+function config_id_integracao() {
+  return Number(process.env.CONFIG_ID_INTEGRACAO);
+}
 
-async function config_id_marketplace() {
+function config_id_marketplace() {
   return Number(process.env.CONFIG_ID_MARKETPLACE);
 }
 
+function getAlterado_apos(numero_dias = 0, hora = null) {
+  let date = new Date();
+  date.setDate(date.getDate() + numero_dias);
+  let format = "yyyy-MM-dd";
+  if (!hora) format = "yyyy-MM-dd HH:mm:ss";
+  return `alterado_apos=${formatDate(date, format)} ${hora}`;
+}
+
+async function tratarRetorno(result, status_code = 200) {
+  let tempo_ate_permitir_novamente = 0;
+  let limite_de_requisicoes = 0;
+
+  //gerou erro , tratamento do erro
+  if (result?.response?.status == 429) {
+    let r = JSON.stringify(result?.response?.data);
+    let url = result?.response?.config?.url;
+    console.log(`Tratando response retorno [429] ${url} ` + r);
+    if (result?.response?.data?.tempo_ate_permitir_novamente) {
+      tempo_ate_permitir_novamente = result?.response?.data
+        ?.tempo_ate_permitir_novamente
+        ? result?.response?.data?.tempo_ate_permitir_novamente
+        : 0;
+      await sleep(1000 * tempo_ate_permitir_novamente + 1);
+    }
+    return 0;
+  }
+
+  if (!result) return 0;
+  if (result?.status == status_code) {
+    console.log(`Tratando retorno [${status_code}] ` + currentDateTimeStr());
+    return status_code;
+  }
+
+  if (result?.status == 429) {
+    console.log("Tratando retorno [429] " + result?.data);
+    if (result?.tempo_ate_permitir_novamente) {
+      tempo_ate_permitir_novamente = result.tempo_ate_permitir_novamente;
+      await sleep(1000 * tempo_ate_permitir_novamente + 1);
+    }
+    return 0;
+  }
+
+  //tratar o cabecalho
+}
+
 module.exports = {
+  tratarRetorno,
+  getAlterado_apos,
+
+  config_id_integracao,
   config_modulo_server,
   config_modulo_client,
   config_id_marketplace,
@@ -303,6 +362,7 @@ module.exports = {
   toJSONObject,
 
   currentDateTimeStr,
+  dateUSToSql,
   dateBrToSql,
   formatDateBr,
   dateBrToIso8601,

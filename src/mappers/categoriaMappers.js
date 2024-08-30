@@ -6,12 +6,14 @@ const lib = require("../utils/lib");
 class CategoriaMappers {
   //Explicacao static ( nao preciso de instanciar a classe )
   static toMercos(payload) {
-    return {
+    const obj = {
       id: payload.id_ext,
       nome: String(payload.descricao),
-      categoria_pai_id: payload.parent,
       excluido: false,
     };
+    if (payload.parent && payload.parent > 0)
+      obj.categoria_pai_id = payload.parent;
+    return obj;
   }
 }
 

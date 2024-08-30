@@ -22,9 +22,8 @@ mercos.patch(url, data);
 
 async function getProdutos(alterado_apos) {
   if (!alterado_apos) alterado_apos = "alterado_apos=2024-01-01 00:00:00";
-
   try {
-    let res = await api(`/v1/produtos?${alterado_apos}`, {}, "GET");
+    let res = await api(`v1/produtos?${alterado_apos}`, null, "GET");
     return res;
   } catch (error) {
     console.log(error);
@@ -372,7 +371,7 @@ async function updateCampos_extras_cliente(id, data) {
 }
 
 async function getCategorias(alterado_apos) {
-  if (!alterado_apos) alterado_apos = "alterado_apos=2024-01-01 01:00:00";
+  if (!alterado_apos) alterado_apos = "alterado_apos=2024-01-01 00:00:00";
   try {
     let res = await api(`v1/categorias?${alterado_apos}`, {}, "GET");
     return res;
@@ -474,7 +473,7 @@ async function updateTransportadoras(id, data) {
 }
 
 async function getCondicoes_pagamento(alterado_apos = null) {
-  if (!alterado_apos) alterado_apos = "alterado_apos=2016-08-26 15:00:09";
+  if (!alterado_apos) alterado_apos = "alterado_apos=2024-08-26 15:00:09";
   try {
     let res = await api(`v1/condicoes_pagamento?${alterado_apos}`, {}, "GET");
     return res;
@@ -580,7 +579,7 @@ async function updatesFormas_pagamento(id, data) {
 
 async function getPedidos(alterado_apos) {
   try {
-    let res = await api(`v2/pedidos?${alterado_apos}`, {}, "GET");
+    let res = await api(`v2/pedidos?${alterado_apos}&status=2`, {}, "GET");
     return res;
   } catch (error) {
     console.log(error);
@@ -621,7 +620,7 @@ async function updatePedidos(id, data) {
 
 async function cancelarPedidos(id) {
   try {
-    let res = await api(`v2/pedidos/cancelar/${id}`, {}, "POST");
+    let res = await api(`v1/pedidos/cancelar/${id}`, {}, "POST");
     return res;
   } catch (error) {
     console.log(error);

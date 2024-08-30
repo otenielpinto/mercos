@@ -15,15 +15,18 @@ async function init() {
   //modulo client
   if (lib.config_modulo_client() == 1) {
     //aqui pode fazer uma Promise.all()
-    //await enviarEstoque();
-    //await enviarAnunciosPendente();
-    //await recebeAnunciosProcessado();
+    await enviarEstoque();
+    await enviarAnunciosPendente();
   }
 
   //modulo servidor
   if (lib.config_modulo_server() == 1) {
     //await ajustar_estoque_em_lote();
-    //await enviarTodosAnunciosB2B();
+    await enviarTodosAnunciosB2B();
+  }
+
+  if (lib.config_modulo_client() == 1) {
+    await recebeAnunciosProcessado();
   }
 }
 
@@ -36,23 +39,26 @@ async function ajustar_estoque_em_lote() {
   let lote = [];
   for (let row of rows) {
     if (!row?.meuspedidosid) continue; //provisoria nos testes
-    let obj = { produto_id: row?.meuspedidosid, novo_saldo: row?.estoque };
+    let obj = {
+      produto_id: row?.meuspedidosid,
+      novo_saldo: row?.estoque,
+    };
     lote.push(obj);
 
     if (lote.length >= MAX_RECORDS_LOTE) {
-      result = await mercosService.ajustar_estoque_em_lote(lote);
       for (let i = 1; i < 10; i++) {
-        if (result?.status == 200) break;
-        await lib.sleep(1000 * i);
         result = await mercosService.ajustar_estoque_em_lote(lote);
+        if ((await lib.tratarRetorno(result, 200)) == 200) break;
       }
       lote = [];
     }
   }
 
   if (lote.length > 0) {
-    await lib.sleep(1000 * 6);
-    result = await mercosService.ajustar_estoque_em_lote(lote);
+    for (let i = 1; i < 10; i++) {
+      result = await mercosService.ajustar_estoque_em_lote(lote);
+      if ((await lib.tratarRetorno(result, 200)) == 200) break;
+    }
     lote = [];
   }
 }
@@ -72,15 +78,13 @@ async function enviarImagensProdutoById(id_anuncio) {
   let result = null;
   for (let i = 1; i < 10; i++) {
     result = await mercosService.imagens_produto(body);
-    if (result?.status == 201) break;
-    await lib.sleep(1000 * i);
+    if ((await lib.tratarRetorno(result, 201)) == 201) break;
   }
-
-  return { status: result.status, statusText: result.statusText, ...body };
+  return { status: result?.status, statusText: result?.statusText, ...body };
 }
 
 async function enviarEstoque() {
-  let id_integracao = await lib.config_id_marketplace();
+  let id_integracao = lib.config_id_integracao();
   let id_variacao = 0;
   let id_flag = 99;
   let id_produto = 0;
@@ -109,7 +113,7 @@ async function updateAnuncioSQL(items) {
   let cmd_sql = "";
   let processado = 1; //processado
   for (let item of items) {
-    cmd_sql += `UPDATE MPK_ANUNCIO SET STATUS=${processado},ID_ANUNCIO_MKTPLACE=${item?.meuspedidosid} WHERE ID=${item?.id};\n`;
+    cmd_sql += `UPDATE MPK_ANUNCIO SET STATUS=${processado},ID_ANUNCIO_MKTPLACE=${item?.meuspedidosid} WHERE ID=${item?.id} AND STATUS=0 ;\n`;
   }
 
   let execute_block_sql = `EXECUTE BLOCK
@@ -121,6 +125,7 @@ async function updateAnuncioSQL(items) {
 
   fb5.firebird.attach(fb5.dboptions, (err, db) => {
     if (err) {
+      db.detach();
       console.log(err);
       return;
     }
@@ -137,6 +142,8 @@ async function recebeAnunciosProcessado() {
   const anuncio = new TAnuncio.MpkAnuncio(await TMongo.mongoConnect());
   let processado = TAnuncioTypes.anuncioTypes.processado;
   let items = await anuncio.findAllByIds({ status: processado });
+  console.log("Recebendo produtos processados", items?.length);
+
   if (!items) return;
   let lote = [];
 
@@ -164,9 +171,9 @@ async function enviarTodosAnunciosB2B() {
   const rows = await anuncio.findAll({
     status: TAnuncioTypes.anuncioTypes.pendente,
   });
+
   if (!rows) return;
   for (let row of rows) {
-    if (row?.meuspedidosid) continue;
     await setB2BAnuncio(row);
   }
 }
@@ -200,7 +207,7 @@ async function getAnuncios(
 }
 
 async function enviarAnunciosPendente() {
-  const id_integracao = await lib.config_id_marketplace();
+  const id_integracao = lib.config_id_integracao();
   const rows = await getAnuncios(
     id_integracao,
     0,
@@ -209,12 +216,12 @@ async function enviarAnunciosPendente() {
     0,
     " WHERE STATUS=0 "
   );
+
   if (!rows) return;
 
   const anuncio = new TAnuncio.MpkAnuncio(await TMongo.mongoConnect());
   for (let row of rows) {
     await anuncio.update(row?.id, row); // Ganhar velocidade instanciando apenas 1 X
-    //await setAnuncio(row);
   }
 }
 
@@ -293,19 +300,20 @@ async function setB2BAnuncio(payload) {
   const body = TProdutoMappers.ProdutoMappers.toMercos(payload);
   if (body.categoria_id == 0) delete body.categoria_id;
 
+  //teste para obter 429
+  // for (let i = 1; i < 10; i++) {
+  //   let r = await mercosService.getProdutos("");
+  // }
+
   if (meuspedidosid > 0) {
     try {
-      result = await mercosService.updateProdutos(meuspedidosid, body);
       for (let i = 1; i < 10; i++) {
-        if (result?.status == 200) break;
-        console.log(
-          `Tentativa de atualizacao [${i}] ` + lib.currentDateTimeStr()
-        );
-        await lib.sleep(1000 * i);
         result = await mercosService.updateProdutos(meuspedidosid, body);
+        if ((await lib.tratarRetorno(result, 200)) == 200) break;
       }
+
       if (!result) return;
-      let { headers, status } = result;
+      let { status } = result;
       if (status == 200) {
         payload.id_categoriaweb = id_categoria;
         payload.status = TAnuncioTypes.anuncioTypes.processado;
@@ -317,34 +325,47 @@ async function setB2BAnuncio(payload) {
     }
   } else
     try {
-      result = await mercosService.createProdutos(body);
       for (let i = 1; i < 10; i++) {
-        if (result?.status == 201) break;
-        console.log(`Tentativa de cadastro [${i}] ` + lib.currentDateTimeStr());
-        await lib.sleep(1000 * i);
         result = await mercosService.createProdutos(body);
+        if ((await lib.tratarRetorno(result, 201)) == 201) break;
       }
+
       if (!result) return;
       let { headers, status } = result;
       if (status == 201) {
         payload.id_categoriaweb = id_categoria;
         payload.meuspedidosid = Number(headers["meuspedidosid"]);
         payload.status = TAnuncioTypes.anuncioTypes.processado;
+        let m = payload?.meuspedidosid + " " + lib.currentDateTimeStr();
         await setAnuncio(payload);
-        console.log(
-          "produto cadastrado no Mercos " +
-            payload?.meuspedidosid +
-            " " +
-            lib.currentDateTimeStr()
-        );
+        console.log("produto cadastrado no Mercos " + m);
       }
     } catch (error) {
       result = null;
     }
 }
+async function getAnuncioB2B(numero_dias = 0) {
+  let alterado_apos = lib.getAlterado_apos(numero_dias, "00:00:00");
+  let result = null;
+  let eof = 1;
+  let lote = [];
+  while (eof > 0) {
+    result = await mercosService.getProdutos(alterado_apos);
+    if ((await lib.tratarRetorno(result, 200)) != 200) {
+      continue;
+    }
+    eof = result?.data?.length ? result?.data?.length : 0;
+    let items = result?.data;
+    if (!Array.isArray(items)) items = [];
+    for (let item of items) {
+      alterado_apos = `alterado_apos=${item.ultima_alteracao}`;
+      lote.push(item);
+    }
+  }
+  return lote;
+}
 
 //routes
-
 const doAddAnuncioB2BOne = async (req, res) => {
   try {
     res.send(await addAnuncioB2BOne(req.params.id));
@@ -365,8 +386,22 @@ const doEnviarImagensProdutoById = async (req, res) => {
   }
 };
 
+const doGetAnuncioB2B = async (req, res) => {
+  console.log(req.query);
+  let num_dias = Number(req.query.num_dias ? req.query.num_dias : 0);
+  try {
+    res.send(await getAnuncioB2B(num_dias));
+  } catch (err) {
+    res.status(500).send({
+      message: err.message,
+    });
+  }
+};
+
 module.exports = {
   init,
   doAddAnuncioB2BOne,
+  doGetAnuncioB2B,
   doEnviarImagensProdutoById,
+  getAnuncioB2B,
 };

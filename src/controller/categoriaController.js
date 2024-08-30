@@ -4,13 +4,16 @@ const fb5 = require("../infra/fb5");
 const lib = require("../utils/lib");
 const mercosService = require("../services/mercosService");
 const CategoriaMappers = require("../mappers/categoriaMappers");
+const systemService = require("../services/systemService");
 
 async function init() {
+  if ((await systemService.started(1, "categoria_produto")) == 1) return;
+
   await setCategorias();
   try {
-    await getB2bCategorias();
+    await getCategoriasB2B();
   } finally {
-    await setB2bCategorias();
+    await setCategoriasB2B();
   }
   return getCategorias();
 }
@@ -38,22 +41,31 @@ async function setCategorias() {
   }
 }
 
-async function getB2bCategorias() {
+async function getCategoriasB2B() {
   const categoria = new TCategoria.CategoriaRepository(
     await TMongo.mongoConnect()
   );
 
   //busco categorias do mercos
   let result = null;
+  let lote = [];
+  let alterado_apos = null;
   try {
     for (let i = 1; i < 10; i++) {
-      result = await mercosService.getCategorias(null);
-      if (result?.status == 200) break;
-      await lib.sleep(1000 * i);
+      result = await mercosService.getCategorias(alterado_apos);
+      await lib.tratarRetorno(result, 200);
+      if (result?.status == 200) {
+        let { data: items } = result;
+        if (!Array.isArray(items)) items = [];
+        if (items.length == 0) break;
+        for (let item of items) {
+          alterado_apos = `alterado_apos=${item.ultima_alteracao}`;
+          lote.push(item);
+        }
+      }
     }
-    if (!result) return;
-    let { data: items } = result;
-    for (let item of items) {
+
+    for (let item of lote) {
       if (item.excluido == true) continue;
       let obj = await categoria.findByDescricao(item?.nome);
       if (!obj) continue;
@@ -67,12 +79,14 @@ async function getB2bCategorias() {
   } catch (error) {
     return;
   }
+  return lote;
 }
 
-async function setB2bCategorias() {
+async function setCategoriasB2B() {
   const categoria = new TCategoria.CategoriaRepository(
     await TMongo.mongoConnect()
   );
+
   let result = null;
   let items = await categoria.findAll();
   if (!Array.isArray(items)) return;
@@ -83,9 +97,9 @@ async function setB2bCategorias() {
     if (payload?.id === 0) {
       delete payload?.id;
       for (let i = 1; i < 10; i++) {
-        result = await mercosService.createCategorias(JSON.stringify(payload));
+        result = await mercosService.createCategorias(payload);
+        await lib.tratarRetorno(result, 201);
         if (result?.status == 201) break;
-        await lib.sleep(1000 * i);
       }
       if (!result) continue;
       let { headers, status } = result;
@@ -100,18 +114,29 @@ async function setB2bCategorias() {
 
 async function doCreate() {
   //a diferenca que nao faz teste algum se , já executou no dia
-  console.log("Sincronizando todas as categorias");
+  //console.log("Sincronizando todas as categorias");
   await setCategorias();
   try {
-    await getB2bCategorias();
+    await getCategoriasB2B();
   } finally {
-    await setB2bCategorias();
+    await setCategoriasB2B();
   }
   return getCategorias();
 }
 
+const doGetCategoriasB2B = async (req, res) => {
+  try {
+    res.send(await getCategoriasB2B());
+  } catch (err) {
+    res.status(500).send({
+      message: err.message,
+    });
+  }
+};
+
 module.exports = {
   init,
   doCreate,
+  doGetCategoriasB2B,
   getCategorias,
 };

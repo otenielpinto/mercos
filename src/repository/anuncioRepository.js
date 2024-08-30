@@ -105,7 +105,7 @@ class MpkAnuncio {
           .collection(collection)
           .updateMany(query, { $set: fields });
       } catch (e) {
-        await new Promise((resolve) => setTimeout(resolve, 500));
+        await new Promise((resolve) => setTimeout(resolve, 1000));
         console.log(e);
       }
     } //for

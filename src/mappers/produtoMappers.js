@@ -11,6 +11,7 @@ class ProdutoMappers {
     let id_categoriaweb = payload?.id_categoriaweb;
     let detalhes_html = payload?.detalhes_html;
     let ativo = payload?.vender_web == "S";
+    let excluido = false;
     if (payload?.descricao.startsWith(".")) ativo = false;
 
     return {
@@ -25,7 +26,7 @@ class ProdutoMappers {
       unidade: payload.unidade ? payload.unidade : "UN",
       saldo_estoque: Number(payload.estoque),
       observacoes: detalhes_html,
-      excluido: false,
+      excluido: excluido,
       ativo: ativo,
       exibir_no_b2b: ativo,
       categoria_id: id_categoriaweb,
