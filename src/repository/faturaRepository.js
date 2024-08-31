@@ -1,15 +1,21 @@
 //Classe tem letras maiuculoas
 
-const collection = "tmp_modelo";
+const collection = "tmp_fatura";
 
-class ModeloRepository {
+class FaturaRepository {
   constructor(db) {
     this.db = db;
   }
 
   async create(payload) {
-    const result = await this.db.collection(collection).insertOne(payload);
-    return result.insertedId;
+    let obj = await this.findById(payload.id);
+    if (!obj) {
+      if (!payload.sys_status) payload.sys_status = 0;
+      payload.created_at = new Date();
+      const result = await this.db.collection(collection).insertOne(payload);
+      return result.insertedId;
+    }
+    return await this.update(payload.id, payload);
   }
 
   async update(id, payload) {
@@ -52,4 +58,4 @@ class ModeloRepository {
   }
 }
 
-module.exports = { ModeloRepository };
+module.exports = { FaturaRepository };

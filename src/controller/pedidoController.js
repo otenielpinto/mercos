@@ -5,17 +5,70 @@ const { PedidoRepository } = require("../repository/pedidoRepository");
 const TMongo = require("../infra/mongoClient");
 const { pedidoTypes, pedidoStatus } = require("../types/pedidoTypes");
 const systemService = require("../services/systemService");
+const { FaturaRepository } = require("../repository/faturaRepository");
 
 async function init() {
   await recebePedidosB2BHoje();
   await recebePedidosB2BUltimosDias();
   await createPedidoSQL();
+  await createFaturaSQL();
+  await enviarFaturaB2B();
 
   //implementar assim que possivel
   //await createPedidosB2B();
   // await pedidoCancelar(2054471);
-  //await faturarPedido(2054992, 18572);
   //await alterarFaturamento();
+}
+
+async function createFaturaSQL() {
+  let num_dias = 7;
+  if (systemService.started(1, "enviar_fatura_b2b") == 1) num_dias = 1;
+
+  let rows = await obterPedidosFaturadosSQL(num_dias);
+  if (!rows) return;
+
+  let fatura = new FaturaRepository(await TMongo.mongoConnect());
+  for (let row of rows) {
+    fatura.create(row);
+  }
+}
+
+async function enviarFaturaB2B() {
+  let fatura = new FaturaRepository(await TMongo.mongoConnect());
+  let filter = { sys_status: 0 };
+  let rows = await fatura.findAll(filter);
+
+  for (let row of rows) {
+    let obs = "Pedido numero " + row?.id;
+    let id_faturamento = await faturarPedido(row.id_pedido, row.valor, obs);
+    if (id_faturamento) {
+      let update = { id_faturamento: id_faturamento, sys_status: 1 };
+      await fatura.update(row.id, update);
+    }
+  }
+}
+
+async function obterPedidosFaturadosSQL(num_dias) {
+  let config_id_marketplace = lib.config_id_marketplace();
+  if (!num_dias) num_dias = 7;
+
+  let cmd_sql = `SELECT 
+  M.ID, 
+  M.NUMERO,
+  M.ID_PEDIDO ,
+  M.IDMARKETPLACE,
+  M.DTMOVTO , 
+  M.DT_FATURA, 
+  P.VALOR
+    FROM
+   PEDIDO_MARKETPLACE M
+   LEFT JOIN PEDIDO_VENDA P ON (P.ID=M.ID)
+   WHERE
+     M.DT_FATURA BETWEEN CURRENT_DATE-${num_dias} AND CURRENT_DATE AND
+     M.IDMARKETPLACE = ${config_id_marketplace}
+  `;
+
+  return await fb5.executeQuery(cmd_sql, []);
 }
 
 async function procPedidoMktPlaceMercosSQL(items) {
@@ -155,7 +208,7 @@ async function recebePedidosB2B(num_dias = 0) {
   let r = 0;
   while (eof > 0) {
     result = await mercosService.getPedidos(alterado_apos);
-    if (await lib.tratarRetorno(result, 200))
+    if ((await lib.tratarRetorno(result, 200)) == 200)
       eof = result?.data?.length ? result?.data?.length : 0;
 
     let pedidos = result?.data;
@@ -187,23 +240,28 @@ async function pedidoEntregue(id) {
   //console.log(result);
 }
 
-async function faturarPedido(pedido_id, valor) {
+async function faturarPedido(pedido_id, valor, obs = "") {
+  let data_faturamento = lib.formatDate(new Date(), "yyyy-MM-dd");
+
   let body = {
     pedido_id: pedido_id,
     //    cliente_id: 8125218,
     valor_faturado: valor,
-    data_faturamento: "2024-08-30",
+    data_faturamento: data_faturamento,
     //"numero_nf": "2134",
-    informacoes_adicionais: "homologando mercos api ...",
+    informacoes_adicionais: obs,
   };
-  await lib.sleep(1000 * 10);
-  let result = await mercosService.faturarPedido(body);
-  if (result?.status == 201) {
-    console.log(
-      "Faturado com sucesso id_faturamento " + result?.headers?.meuspedidosid
-    );
+
+  let faturamento_id = null;
+  let t = 0;
+  while (t++ < 10) {
+    let result = await mercosService.faturarPedido(body);
+    if ((await lib.tratarRetorno(result, 201)) == 201) {
+      faturamento_id = result?.headers?.meuspedidosid;
+      break;
+    }
   }
-  //console.log(result);
+  return faturamento_id;
 }
 
 async function alterarFaturamento(faturamento_id, pedido_id, valor) {
@@ -223,6 +281,7 @@ async function alterarFaturamento(faturamento_id, pedido_id, valor) {
 }
 
 async function updatePedidosB2B() {
+  // falta implementar isso
   //   let body = {};
   //   let obj = null;
   //   for (let pedido of lote) {

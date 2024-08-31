@@ -1,4 +1,5 @@
 const TMongo = require("../infra/mongoClient");
+const { fbImageByIdProduto } = require("../infra/fbImage");
 const fb5 = require("../infra/fb5");
 const lib = require("../utils/lib");
 const mercosService = require("../services/mercosService");
@@ -25,6 +26,7 @@ async function init() {
     await enviarTodosAnunciosB2B();
   }
 
+  //garantir que o estoque esteja atualizado
   if (lib.config_modulo_client() == 1) {
     await recebeAnunciosProcessado();
   }
@@ -69,18 +71,37 @@ async function enviarImagensProdutoById(id_anuncio) {
   let id_storage = lib.config_id_storage();
   let mercos_produto_id = anuncio?.meuspedidosid;
 
-  const body = {
-    produto_id: mercos_produto_id,
-    imagem_url: `https://www.superempresarial.com.br/storage/${id_storage}/${sku}-1.jpg`,
-    ordem: 1,
-  };
+  //imagem_url
+  // const body = {
+  //   produto_id: mercos_produto_id,
+  //   imagem_url: `https://www.superempresarial.com.br/storage/${id_storage}/${sku}-1.jpg`,
+  //   ordem: 1,
+  // };
 
+  //imagem_base64   # envia todas as imagens
+  let rows = await fbImageByIdProduto(sku);
+  let retorno = [];
+  let lote = [];
+  let num = 0;
   let result = null;
-  for (let i = 1; i < 10; i++) {
-    result = await mercosService.imagens_produto(body);
-    if ((await lib.tratarRetorno(result, 201)) == 201) break;
+  for (let row of rows) {
+    const body = {
+      produto_id: mercos_produto_id,
+      imagem_base64: row.imagem_base64,
+      ordem: num++,
+    };
+    lote.push(body);
+    retorno.push({ posicao: num, id_produto: row.id_produto });
   }
-  return { status: result?.status, statusText: result?.statusText, ...body };
+
+  for (let body of lote) {
+    for (let i = 1; i < 10; i++) {
+      result = await mercosService.imagens_produto(body);
+      if ((await lib.tratarRetorno(result, 201)) == 201) break;
+    }
+  }
+
+  return { ...retorno, status: result?.status, statusText: result?.statusText };
 }
 
 async function enviarEstoque() {

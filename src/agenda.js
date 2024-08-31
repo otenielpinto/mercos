@@ -1,5 +1,6 @@
 const db = require("./infra/mongoClient");
 const lib = require("./utils/lib");
+const { fbImageByIdProduto } = require("./infra/fbImage");
 const nodeSchedule = require("node-schedule");
 const categoriaController = require("./controller/categoriaController");
 const produtoController = require("./controller/produtoController");
@@ -12,22 +13,30 @@ global.processandoNow = 0;
 
 async function task() {
   global.processandoNow = 1;
+
   await categoriaController.init();
-  await produtoController.init();
-
-  global.processandoNow = 0;
-  console.log(" Fim do processamento rotina task" + lib.currentDateTimeStr());
-}
-
-async function init() {
-  await categoriaController.init();
-  //await transportadoraController.init();
-
+  await transportadoraController.init();
   await pedidoController.init();
   await diversosController.init();
   await produtoController.init();
   await clienteController.init();
-  return;
+
+  global.processandoNow = 0;
+  console.log(" Fim do processamento rotina task " + lib.currentDateTimeStr());
+}
+
+async function init() {
+  //let rows = await fbImageByIdProduto(8642711);
+  //console.log(rows);
+
+  //return;
+
+  // await categoriaController.init();
+  // await transportadoraController.init();
+  // await pedidoController.init();
+  // await diversosController.init();
+  // await produtoController.init();
+  // await clienteController.init();
 
   try {
     const time = 5; //tempo em minutos

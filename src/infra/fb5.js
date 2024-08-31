@@ -13,13 +13,14 @@ dboptions.lowercase_keys = true; // set to true to lowercase keys
 dboptions.role = null; // default
 dboptions.pageSize = 8192; // default when creating database
 dboptions.retryConnectionInterval = 5000; // reconnect interval in case of connection drop
-dboptions.blobAsText = false;
+dboptions.blobAsText = true;
 dboptions.encoding = "UTF8"; //WIN1252
 
 const executeQuery = async (ssql, parameters) => {
   return new Promise((resolve, reject) => {
     firebird.attach(dboptions, (err, db) => {
       if (err) {
+        db.detach();
         console.log(ssql, parameters);
         reject(err);
       } else {
