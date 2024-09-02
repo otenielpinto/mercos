@@ -29,14 +29,13 @@ async function init() {
   //let rows = await fbImageByIdProduto(8642711);
   //console.log(rows);
 
-  //return;
-
-  // await categoriaController.init();
+  //await categoriaController.init();
   // await transportadoraController.init();
   // await pedidoController.init();
   // await diversosController.init();
   // await produtoController.init();
   // await clienteController.init();
+  //return;
 
   try {
     const time = 5; //tempo em minutos
