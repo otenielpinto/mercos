@@ -242,6 +242,7 @@ async function enviarAnunciosPendente() {
 
   const anuncio = new TAnuncio.MpkAnuncio(await TMongo.mongoConnect());
   for (let row of rows) {
+    console.log("enviando", row?.id + " - " + row?.descricao);
     await anuncio.update(row?.id, row); // Ganhar velocidade instanciando apenas 1 X
   }
 }
