@@ -193,9 +193,15 @@ async function enviarTodosAnunciosB2B() {
     status: TAnuncioTypes.anuncioTypes.pendente,
   });
 
+  let cont = 0;
   if (!rows) return;
   for (let row of rows) {
+    cont++;
+    console.log("Enviando anuncio", cont + "/1000");
     await setB2BAnuncio(row);
+    if (cont > 1000) {
+      break;
+    }
   }
 }
 
@@ -242,7 +248,6 @@ async function enviarAnunciosPendente() {
 
   const anuncio = new TAnuncio.MpkAnuncio(await TMongo.mongoConnect());
   for (let row of rows) {
-    console.log("enviando", row?.id + " - " + row?.descricao);
     await anuncio.update(row?.id, row); // Ganhar velocidade instanciando apenas 1 X
   }
 }
