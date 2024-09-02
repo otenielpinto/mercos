@@ -7,11 +7,7 @@ const CategoriaMappers = require("../mappers/categoriaMappers");
 const systemService = require("../services/systemService");
 
 async function init() {
-  await getCategoriasB2B();
-  return;
-
   if ((await systemService.started(1, "categoria_produto")) == 1) return;
-
   await setCategorias();
   try {
     await getCategoriasB2B();
