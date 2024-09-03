@@ -13,6 +13,10 @@ const MAX_CMD_SQL = 100;
 const MAX_RECORDS_LOTE = 300; //quantidade de registros por lote
 
 async function init() {
+  // enviar fotos em lote;
+  await enviarFotosEmLote();
+  return;
+
   //modulo client
   if (lib.config_modulo_client() == 1) {
     //aqui pode fazer uma Promise.all()
@@ -22,7 +26,7 @@ async function init() {
 
   //modulo servidor
   if (lib.config_modulo_server() == 1) {
-    //await ajustar_estoque_em_lote();
+    await ajustar_estoque_em_lote();
     await enviarTodosAnunciosB2B();
   }
 
@@ -65,6 +69,26 @@ async function ajustar_estoque_em_lote() {
   }
 }
 
+async function enviarFotosEmLote() {
+  const anuncio = new TAnuncio.MpkAnuncio(await TMongo.mongoConnect());
+  const rows = await anuncio.findAll({
+    status: TAnuncioTypes.anuncioTypes.pendente,
+  });
+
+  if (!rows) return;
+  for (let row of rows) {
+    let payload = {
+      status: TAnuncioTypes.anuncioTypes.processado,
+    };
+    console.log("Enviando imagem anuncio " + row?.sku);
+    try {
+      await enviarImagensProdutoById(row?.id);
+    } catch (error) {}
+    //depois que enviar todas as imagens em lote nao precisa atualizar status
+    await anuncio.update(row?.id, payload);
+  }
+}
+
 async function enviarImagensProdutoById(id_anuncio) {
   let anuncio = await getAnuncioB2bById(id_anuncio);
   let sku = anuncio?.sku ? anuncio?.sku : "";
@@ -80,6 +104,7 @@ async function enviarImagensProdutoById(id_anuncio) {
 
   //imagem_base64   # envia todas as imagens
   let rows = await fbImageByIdProduto(sku);
+  if (!rows) return { message: "Nenhuma imagem encontrada" };
   let retorno = [];
   let lote = [];
   let num = 0;
@@ -193,15 +218,9 @@ async function enviarTodosAnunciosB2B() {
     status: TAnuncioTypes.anuncioTypes.pendente,
   });
 
-  let cont = 0;
   if (!rows) return;
   for (let row of rows) {
-    cont++;
-    console.log("Enviando anuncio", cont + "/1000");
     await setB2BAnuncio(row);
-    if (cont > 1000) {
-      break;
-    }
   }
 }
 
