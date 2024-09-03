@@ -1,11 +1,11 @@
 const FirebirdImage = require("node-firebird");
 
 const options = {};
-options.host = process.env.DBIMAGE_HOST;
-options.port = Number(process.env.DBIMAGE_PORT) || 4444;
-options.database = process.env.DBIMAGE_DATABASE;
-options.user = String(process.env.DBIMAGE_USER);
-options.password = String(process.env.DBIMAGE_PWD);
+options.host = process.env.FIREBIRD_IMAGE_HOST;
+options.port = Number(process.env.FIREBIRD_IMAGE_PORT) || 4444;
+options.database = process.env.FIREBIRD_IMAGE_DATABASE;
+options.user = String(process.env.FIREBIRD_IMAGE_USER);
+options.password = String(process.env.FIREBIRD_IMAGE_PWD);
 options.lowercase_keys = true; // set to true to lowercase keys
 options.role = null; // default
 options.pageSize = 8192; // default when creating database

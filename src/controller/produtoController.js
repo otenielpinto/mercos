@@ -14,8 +14,6 @@ const MAX_RECORDS_LOTE = 300; //quantidade de registros por lote
 
 async function init() {
   // enviar fotos em lote;
-  await enviarFotosEmLote();
-  return;
 
   //modulo client
   if (lib.config_modulo_client() == 1) {
@@ -34,6 +32,9 @@ async function init() {
   if (lib.config_modulo_client() == 1) {
     await recebeAnunciosProcessado();
   }
+
+  // so quando estiver implantando  # precisa status=0 nos produtos que precisa atualizar
+  //await enviarFotosEmLote();
 }
 
 async function ajustar_estoque_em_lote() {
@@ -80,12 +81,12 @@ async function enviarFotosEmLote() {
     let payload = {
       status: TAnuncioTypes.anuncioTypes.processado,
     };
-    console.log("Enviando imagem anuncio " + row?.sku);
+    console.log(`Enviando imagem sku[${row?.sku}]`);
     try {
       await enviarImagensProdutoById(row?.id);
     } catch (error) {}
     //depois que enviar todas as imagens em lote nao precisa atualizar status
-    await anuncio.update(row?.id, payload);
+    //await anuncio.update(row?.id, payload);
   }
 }
 
