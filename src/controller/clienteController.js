@@ -4,14 +4,14 @@ const mercosService = require("../services/mercosService");
 
 async function newCliente() {
   let row = {
-    razao_social: "VRACING ESPECIALISTA EM MOTO PECAS LTDA ME ",
-    nome_fantasia: "VRACING",
+    razao_social: "MERCOS",
+    nome_fantasia: "MERCOS",
     tipo: "J",
-    cnpj: "08418431000184",
-    inscricao_estadual: "0190099216",
+    cnpj: "00000006000001",
+    inscricao_estadual: "0000000000",
     suframa: "",
     rua: "AV BRASIL",
-    numero: "502",
+    numero: "0",
     complemento: "1 ANDAR",
     bairro: "IMIGRANTE",
     cep: "93700000",
@@ -20,26 +20,26 @@ async function newCliente() {
     observacao: "",
     emails: [
       {
-        email: "vracing@gmail.com",
+        email: "thepowerofwordsg@gmail.com",
       },
     ],
     telefones: [
       {
-        numero: "(51)3598-9398 ",
+        numero: "(51)3090-0008 ",
       },
     ],
     contatos: [
       {
-        nome: "Valmor",
+        nome: "Masteer",
         cargo: "Ceo",
         emails: [
           {
-            email: "contato@vracing.com.br",
+            email: "contato@gmail.com.br",
           },
         ],
         telefones: [
           {
-            numero: "(51) 3598-9398",
+            numero: "(51) 3000-0098",
           },
         ],
       },
@@ -60,17 +60,11 @@ async function createCliente() {
   let cliente = await newCliente();
   let result;
   cliente.razao_social = "bbf9326da1764886";
-  cliente.cnpj = "50434527000100";
+  cliente.cnpj = "00000006000001";
   cliente.tipo = "J";
   await lib.sleep(1000 * 6);
   result = await mercosService.createClientes(cliente);
   console.log(result);
-
-  /*
-meuspedidosid: '8125204',
-meuspedidosurl: 'http://integracao.meuspedidos.com.br/api/v1/clientes8125204/',
- meuspedidos_qtde_total_registros: '0',  
-  */
 }
 
 async function updateCliente() {
@@ -79,7 +73,7 @@ async function updateCliente() {
   // let cliente = await newCliente();
   // cliente.razao_social = "9d54a6ae20a04ac3";
   // cliente.nome_fantasia = "6852695b8ea84e7b";
-  // cliente.cnpj = "06470356000175";
+  // cliente.cnpj = "00000006000001";
   // cliente.excluido = true;
   // id = 8114872;
   // result = await mercosService.updateClientes(id, cliente);
