@@ -27,3 +27,8 @@ Este projeto visa a integração de sistemas internos com a API do Mercos, uma p
 - Redução significativa de tempo e custo operacional.
 - Melhoria na precisão dos dados e na eficiência dos processos.
 - Flexibilidade para adaptação futura a novas funcionalidades da API Mercos.
+
+## Material de referencias
+
+- <https://mercos.docs.apiary.io/#>
+- <https://mercos.com/>
