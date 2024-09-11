@@ -34,11 +34,7 @@ async function importarCondPagamento() {
   }
 
   for (let item of lote) {
-    let payload = {
-      ...item,
-      codigo_erp: "",
-    };
-    await condPagamentoRepository.update(item.id, payload);
+    await condPagamentoRepository.update(item.id, item);
   }
 }
 

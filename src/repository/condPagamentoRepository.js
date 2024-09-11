@@ -13,17 +13,20 @@ class CondPagamentoRepository {
   }
 
   async update(id, payload) {
+    let obj = await this.findById(id);
+    if (!obj) payload.codigo_erp = "";
+
     const result = await this.db
       .collection(collection)
       .updateOne({ id: Number(id) }, { $set: payload }, { upsert: true });
-    return result.modifiedCount > 0;
+    return result?.modifiedCount > 0;
   }
 
   async delete(id) {
     const result = await this.db
       .collection(collection)
       .deleteOne({ id: Number(id) });
-    return result.deletedCount > 0;
+    return result?.deletedCount > 0;
   }
 
   async findAll(criterio = {}) {
