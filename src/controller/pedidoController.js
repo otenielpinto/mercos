@@ -6,6 +6,11 @@ const TMongo = require("../infra/mongoClient");
 const { pedidoTypes, pedidoStatus } = require("../types/pedidoTypes");
 const systemService = require("../services/systemService");
 const { FaturaRepository } = require("../repository/faturaRepository");
+const {
+  CondPagamentoRepository,
+} = require("../repository/condPagamentoRepository");
+
+const LISTA_COND_PAGAMENTO = [];
 
 async function init() {
   await recebePedidosB2BHoje();
@@ -98,6 +103,24 @@ async function procPedidoMktPlaceMercosSQL(items) {
     let nome_mktplace = "";
     let nome_vendedor = "";
     let observacao = item?.observacoes ? item?.observacoes : "";
+    let modalidade_entrega_nome = item?.modalidade_entrega_nome
+      ? item?.modalidade_entrega_nome
+      : "";
+    let prazo_entrega = item?.prazo_entrega ? item?.prazo_entrega : "";
+    let condicao_pagamento_id = Number(
+      item?.condicao_pagamento_id ? item?.condicao_pagamento_id : 0
+    );
+    observacao += ` ${modalidade_entrega_nome} - ${prazo_entrega} `;
+    if (observacao) observacao = observacao.substring(0, 250);
+
+    if (condicao_pagamento_id > 0) {
+      try {
+        let res = await obterIdPlanoPagamento(condicao_pagamento_id);
+        if (res?.codigo_erp) forma_pagamento = res?.codigo_erp;
+      } catch (error) {
+        console.log(error);
+      }
+    }
 
     cmd_sql += ` id_pai_pedido = (SELECT RES_ID FROM PEDIDO_SP_I_MKTPLACE
     ('${item.id}',${id_cliente},${item.total}, '${item.numero}','${valor_frete}','${observacao}',${vendedor},'${nome_vendedor}',${id_mktplace},'${nome_mktplace}',
@@ -339,6 +362,28 @@ async function createPedidosB2B() {
 
   let result = await mercosService.createPedidos(body);
   console.log(result);
+}
+
+async function loadCondPagamento() {
+  if (LISTA_COND_PAGAMENTO.length > 0) return;
+  const c = await TMongo.mongoConnect();
+  const condPagamentoRepository = new CondPagamentoRepository(c);
+  let rows = await condPagamentoRepository.findAll({});
+  for (let row of rows) {
+    LISTA_COND_PAGAMENTO.push(row);
+  }
+}
+
+async function obterIdPlanoPagamento(id) {
+  await loadCondPagamento();
+  let result = null;
+  for (let condPagamento of LISTA_COND_PAGAMENTO) {
+    if (condPagamento.id == id) {
+      result = condPagamento;
+      break;
+    }
+  }
+  return result;
 }
 
 module.exports = {

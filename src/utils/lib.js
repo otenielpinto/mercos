@@ -332,7 +332,16 @@ async function tratarRetorno(result, status_code = 200) {
   //tratar o cabecalho
 }
 
+async function isManutencao() {
+  let hora = new Date().getHours();
+  let horario_manutencao = Number(process.env.CONFIG_HORA_MANUNTECAO) || 19;
+  let res = 0;
+  if (hora >= horario_manutencao || hora <= 6) res = 1;
+  return res;
+}
+
 module.exports = {
+  isManutencao,
   tratarRetorno,
   getAlterado_apos,
 
