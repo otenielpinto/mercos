@@ -21,7 +21,7 @@ async function init() {
 
   //implementar assim que possivel
   //await createPedidosB2B();
-  // await pedidoCancelar(2054471);
+  //await pedidoCancelar(2054471);
   //await alterarFaturamento();
 }
 
@@ -42,10 +42,18 @@ async function enviarFaturaB2B() {
   let fatura = new FaturaRepository(await TMongo.mongoConnect());
   let filter = { sys_status: 0 };
   let rows = await fatura.findAll(filter);
+  let dtExcluir = lib.addDays(new Date(), -7);
 
   for (let row of rows) {
+    if (row.dtmovto < dtExcluir) {
+      await fatura.delete(row.id);
+      continue;
+    }
+
     let obs = "Pedido numero " + row?.id;
     let id_faturamento = await faturarPedido(row.id_pedido, row.valor, obs);
+    //console.log("obtendo retorno : " + id_faturamento + " " + row.id);
+
     if (id_faturamento) {
       let update = { id_faturamento: id_faturamento, sys_status: 1 };
       await fatura.update(row.id, update);
@@ -228,20 +236,19 @@ async function recebePedidosB2B(num_dias = 0) {
   let lote = [];
   let result;
   let eof = 1;
-  let r = 0;
+
   while (eof > 0) {
     result = await mercosService.getPedidos(alterado_apos);
     if ((await lib.tratarRetorno(result, 200)) == 200)
       eof = result?.data?.length ? result?.data?.length : 0;
 
     let pedidos = result?.data;
-    if (!Array.isArray(pedidos)) pedidos = [];
+    if (!Array.isArray(pedidos)) break;
     for (let pedido of pedidos) {
       if (pedido.status != String(pedidoStatus.faturado)) continue;
       lote.push(pedido);
       alterado_apos = `alterado_apos=${pedido.ultima_alteracao}`;
     }
-    if (r++ > 20) break;
   }
 
   return lote;
@@ -277,7 +284,7 @@ async function faturarPedido(pedido_id, valor, obs = "") {
 
   let faturamento_id = null;
   let t = 0;
-  while (t++ < 10) {
+  while (t++ < 2) {
     let result = await mercosService.faturarPedido(body);
     if ((await lib.tratarRetorno(result, 201)) == 201) {
       faturamento_id = result?.headers?.meuspedidosid;
