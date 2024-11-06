@@ -9,6 +9,7 @@ const transportadoraController = require("./controller/transportadoraController"
 const pedidoController = require("./controller/pedidoController");
 const clienteController = require("./controller/clienteController");
 const condPagamentoController = require("./controller/condPagamentoController");
+const faturaController = require("./controller/faturaController");
 
 global.processandoNow = 0;
 
@@ -28,6 +29,7 @@ async function task() {
     await transportadoraController.init();
   } finally {
     await pedidoController.init();
+    await faturaController.init();
     await produtoController.init();
     await diversosController.init();
     await clienteController.init();
