@@ -12,12 +12,48 @@ let LISTA_OF_CATEGORIAS = [];
 const MAX_CMD_SQL = 100;
 const MAX_RECORDS_LOTE = 300; //quantidade de registros por lote
 
+async function updateAnuncioForced() {
+  let cmd_sql = ` 
+  SELECT * FROM MPK_UPDANUNCIOFORCED
+  `;
+  return await fb5.executeQuery(cmd_sql, []);
+}
+
+async function updateAnuncioSQL(items) {
+  if (!items) return;
+  if (items?.length == 0) return;
+  let processado = 1; //processado
+
+  let lote = [];
+  for (let item of items) {
+    lote.push({
+      cmd_sql: `UPDATE MPK_ANUNCIO SET STATUS=${processado} WHERE ID=${item?.id} AND STATUS=0 ;\n`,
+      params: [],
+    });
+  }
+  await fb5.executeArraySQL(lote);
+}
+
+async function updateEstoqueSQL(items) {
+  if (!items) return;
+  if (items?.length == 0) return;
+  let processado = 1; //processado
+  let lote = [];
+
+  for (let item of items) {
+    lote.push({
+      cmd_sql: `UPDATE MPK_VARIACAO SET STATUS=${processado} WHERE ID_ANUNCIO=${item?.id} AND STATUS=0 ;\n`,
+      params: [],
+    });
+  }
+  await fb5.executeArraySQL(lote);
+}
+
 async function init() {
-  // enviar fotos em lote;
+  await updateAnuncioForced();
 
   //modulo client
   if (lib.config_modulo_client() == 1) {
-    //aqui pode fazer uma Promise.all()
     await enviarEstoque();
     await enviarAnunciosPendente();
   }
@@ -146,43 +182,10 @@ async function enviarEstoque() {
     id_produto,
     id_anuncio,
   ]);
-  if (!rows) return;
-
   const anuncio = new TAnuncio.MpkAnuncio(await TMongo.mongoConnect());
   try {
     anuncio.updateEstoqueMany(rows);
   } catch (error) {}
-}
-
-async function updateAnuncioSQL(items) {
-  if (!items) return;
-  if (items?.length == 0) return;
-  let cmd_sql = "";
-  let processado = 1; //processado
-  for (let item of items) {
-    cmd_sql += `UPDATE MPK_ANUNCIO SET STATUS=${processado},ID_ANUNCIO_MKTPLACE=${item?.meuspedidosid} WHERE ID=${item?.id} AND STATUS=0 ;\n`;
-  }
-
-  let execute_block_sql = `EXECUTE BLOCK
-    AS
-    BEGIN 
-      ${cmd_sql}
-    END
-  `;
-
-  fb5.firebird.attach(fb5.dboptions, (err, db) => {
-    if (err) {
-      db.detach();
-      console.log(err);
-      return;
-    }
-    db.query(execute_block_sql, [], (err, result) => {
-      db.detach();
-      if (err) {
-        console.log(err);
-      }
-    });
-  }); // fb5.firebird
 }
 
 async function recebeAnunciosProcessado() {
@@ -199,12 +202,14 @@ async function recebeAnunciosProcessado() {
     if (lote.length < MAX_CMD_SQL) continue;
     try {
       await updateAnuncioSQL(lote);
+      await updateEstoqueSQL(lote);
     } catch (error) {}
     lote = [];
   }
 
   try {
     await updateAnuncioSQL(lote);
+    await updateEstoqueSQL(lote);
     lote = [];
   } catch (error) {}
 
@@ -265,7 +270,6 @@ async function enviarAnunciosPendente() {
   );
 
   if (!rows) return;
-
   const anuncio = new TAnuncio.MpkAnuncio(await TMongo.mongoConnect());
   for (let row of rows) {
     await anuncio.update(row?.id, row); // Ganhar velocidade instanciando apenas 1 X

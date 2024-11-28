@@ -10,6 +10,7 @@ const pedidoController = require("./controller/pedidoController");
 const clienteController = require("./controller/clienteController");
 const condPagamentoController = require("./controller/condPagamentoController");
 const faturaController = require("./controller/faturaController");
+const tabelaPrecoController = require("./controller/tabelaPrecoController");
 
 global.processandoNow = 0;
 
@@ -50,6 +51,9 @@ async function init() {
   // await diversosController.init();
   // await produtoController.init();
   // await clienteController.init();
+
+  //await tabelaPrecoController.init();
+  //return;
 
   try {
     let time = process.env.CRON_JOB_TIME || 10; //tempo em minutos

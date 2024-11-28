@@ -86,8 +86,9 @@ async function imagens_produto(data = {}) {
 
 async function getTabelasPreco(alterado_apos = null) {
   if (!alterado_apos) alterado_apos = "alterado_apos=2016-08-26 15:00:09";
+
   try {
-    let res = await api(`/v1/tabelas_preco?${alterado_apos}`, {}, "GET");
+    let res = await api(`v1/tabelas_preco?${alterado_apos}`, {}, "GET");
     return res;
   } catch (error) {
     console.log(error);
@@ -127,11 +128,7 @@ async function updateTabelasPreco(id, data) {
 
 async function getProdutos_tabela_preco(alterado_apos) {
   try {
-    let res = await api(
-      `/v1/produtos_tabela_preco?${alterado_apos}`,
-      {},
-      "GET"
-    );
+    let res = await api(`v1/produtos_tabela_preco?${alterado_apos}`, {}, "GET");
     return res;
   } catch (error) {
     console.log(error);

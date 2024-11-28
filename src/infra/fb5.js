@@ -271,6 +271,41 @@ const getGenId = async (nameGenerator = "") => {
   return result[0].resposta;
 };
 
+async function executeArraySQL(items) {
+  return firebird.attach(fb5.dboptions, (err, db) => {
+    if (err) {
+      console.log(err);
+      return err;
+    } else {
+      db.transaction(
+        firebird.ISOLATION_READ_COMMITTED,
+        async function (err, transaction) {
+          if (err) {
+            console.log(err);
+            transaction.rollback();
+            return err;
+          }
+          for (const item of items) {
+            await executeQueryTrx(transaction, item.cmd_sql, []);
+          }
+          transaction.commit(function (err, result) {
+            if (err) {
+              console.log(err);
+              console.log("Lote com erro, transacao sera rollbacked");
+              transaction.rollback();
+            } else {
+              db.detach();
+              console.log("Lote executado com sucesso [OK]");
+              return result;
+            }
+          });
+        }
+      );
+    }
+    db.detach();
+  });
+}
+
 //USAR O CONCEITO MANY E USAR SQL PURO SEMPRE
 
 module.exports = {
@@ -292,4 +327,6 @@ module.exports = {
   findById,
   getNextId,
   getGenId,
+
+  executeArraySQL,
 };

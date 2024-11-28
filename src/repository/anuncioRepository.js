@@ -89,6 +89,7 @@ class MpkAnuncio {
     }
   }
   async updateEstoqueMany(items = []) {
+    const update_at = new Date();
     if (!Array.isArray(items)) return null;
     let query = {};
     let fields = {};
@@ -98,6 +99,7 @@ class MpkAnuncio {
         estoque: Number(item?.estoque),
         preco: Number(item?.preco),
         preco_promocional: Number(item?.preco_promocional),
+        update_at,
       };
 
       try {
@@ -105,7 +107,7 @@ class MpkAnuncio {
           .collection(collection)
           .updateMany(query, { $set: fields });
       } catch (e) {
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        await new Promise((resolve) => setTimeout(resolve, 500));
         console.log(e);
       }
     } //for
