@@ -13,6 +13,21 @@ const faturaController = require("./controller/faturaController");
 const tabelaPrecoController = require("./controller/tabelaPrecoController");
 
 global.processandoNow = 0;
+global.tarefaContinua = 0;
+
+async function tarefaContinua() {
+  if (global.tarefaContinua == 1) {
+    console.log("Serviço em execução " + lib.currentDateTimeStr());
+    return;
+  }
+  if ((await lib.isManutencao()) == 1) return;
+  global.tarefaContinua = 1;
+  try {
+    await pedidoController.init();
+  } finally {
+    global.tarefaContinua = 0;
+  }
+}
 
 async function task() {
   global.processandoNow = 1;
@@ -29,16 +44,13 @@ async function task() {
     await categoriaController.init();
     await transportadoraController.init();
   } finally {
-    await pedidoController.init();
     await faturaController.init();
     await produtoController.init();
     await diversosController.init();
     await clienteController.init();
 
     global.processandoNow = 0;
-    console.log(
-      " Fim do processamento rotina task " + lib.currentDateTimeStr()
-    );
+    console.log("Fim do processamento rotina task " + lib.currentDateTimeStr());
   }
 }
 
@@ -53,16 +65,19 @@ async function init() {
   // await clienteController.init();
 
   //await tabelaPrecoController.init();
+  //await produtoController.init();
+
   //return;
 
   try {
     let time = process.env.CRON_JOB_TIME || 10; //tempo em minutos
     const job = nodeSchedule.scheduleJob(`*/${time} * * * *`, async () => {
       console.log(" Job start as " + lib.currentDateTimeStr());
+      await tarefaContinua();
       await db.validateTimeConnection();
       if (global.processandoNow == 1) {
         console.log(
-          " Job can't started [processing] " + lib.currentDateTimeStr()
+          "Job can't started [processing] " + lib.currentDateTimeStr()
         );
       } else {
         try {

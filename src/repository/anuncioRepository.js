@@ -13,6 +13,7 @@ class MpkAnuncio {
   }
 
   async update(id, payload) {
+    payload.update_at = new Date();
     const result = await this.db
       .collection(collection)
       .updateOne({ id: Number(id) }, { $set: payload }, { upsert: true });

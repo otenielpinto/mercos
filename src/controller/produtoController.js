@@ -31,6 +31,7 @@ async function updateAnuncioSQL(items) {
       params: [],
     });
   }
+
   await fb5.executeArraySQL(lote);
 }
 
@@ -54,7 +55,6 @@ async function init() {
 
   //modulo client
   if (lib.config_modulo_client() == 1) {
-    await enviarEstoque();
     await enviarAnunciosPendente();
   }
 
@@ -64,7 +64,7 @@ async function init() {
     await enviarTodosAnunciosB2B();
   }
 
-  //garantir que o estoque esteja atualizado
+  //Marcar produtos como processados
   if (lib.config_modulo_client() == 1) {
     await recebeAnunciosProcessado();
   }
@@ -166,28 +166,6 @@ async function enviarImagensProdutoById(id_anuncio) {
   return { ...retorno, status: result?.status, statusText: result?.statusText };
 }
 
-async function enviarEstoque() {
-  let id_integracao = lib.config_id_integracao();
-  let id_variacao = 0;
-  let id_flag = 99;
-  let id_produto = 0;
-  let id_anuncio = 0;
-  let fields = `ID,PRECO,PRECO_PROMOCIONAL,ESTOQUE,SKU`;
-  let cmd_sql = `SELECT ${fields} FROM MPK_GETANUNCIO(?,?,?,?,?) WHERE STATUS=0 `;
-
-  let rows = await fb5.executeQuery(cmd_sql, [
-    id_integracao,
-    id_variacao,
-    id_flag,
-    id_produto,
-    id_anuncio,
-  ]);
-  const anuncio = new TAnuncio.MpkAnuncio(await TMongo.mongoConnect());
-  try {
-    anuncio.updateEstoqueMany(rows);
-  } catch (error) {}
-}
-
 async function recebeAnunciosProcessado() {
   const anuncio = new TAnuncio.MpkAnuncio(await TMongo.mongoConnect());
   let processado = TAnuncioTypes.anuncioTypes.processado;
@@ -268,8 +246,7 @@ async function enviarAnunciosPendente() {
     0,
     " WHERE STATUS=0 "
   );
-
-  if (!rows) return;
+  if (!rows || !Array.isArray(rows)) return;
   const anuncio = new TAnuncio.MpkAnuncio(await TMongo.mongoConnect());
   for (let row of rows) {
     await anuncio.update(row?.id, row); // Ganhar velocidade instanciando apenas 1 X

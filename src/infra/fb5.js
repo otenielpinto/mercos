@@ -272,7 +272,7 @@ const getGenId = async (nameGenerator = "") => {
 };
 
 async function executeArraySQL(items) {
-  return firebird.attach(fb5.dboptions, (err, db) => {
+  return firebird.attach(dboptions, (err, db) => {
     if (err) {
       console.log(err);
       return err;
