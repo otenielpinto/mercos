@@ -67,7 +67,11 @@ async function init() {
   //await tabelaPrecoController.init();
   //await produtoController.init();
 
-  //return;
+  //await pedidoController.init();
+
+  // await tarefaContinua();
+  // console.log("Fim " + lib.currentDateTimeStr());
+  // return;
 
   try {
     let time = process.env.CRON_JOB_TIME || 10; //tempo em minutos

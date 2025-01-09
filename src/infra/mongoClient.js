@@ -49,22 +49,8 @@ async function validateTimeConnection() {
     }
   }
 }
-//-------------------------------------------------------------
-// function testeConexao(){
-//   var MongoClient = require('mongodb').MongoClient;
-// // Connect to the db
-
-// if(!err) {
-//    console.log("You are connected!");
-//    };
-//       db.close();
-// });
-// console.log(MongoClient)
-
-// }
 
 module.exports = {
-  //  testeConexao,
   mongoConnect,
   mongoDisconnect,
   validateTimeConnection,

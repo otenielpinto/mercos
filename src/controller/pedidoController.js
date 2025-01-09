@@ -22,6 +22,16 @@ async function init() {
   //await pedidoCancelar(2054471);
 }
 
+async function pedidoJaCadastrado(id_pedido, id_marketplace) {
+  let cmd_sql = `
+    SELECT FIRST 1 p.id
+    FROM pedido_marketplace p
+    WHERE p.id_pedido = ${id_pedido} AND p.idmarketplace = ${id_marketplace}
+  `;
+  let result = await fb5.executeQuery(cmd_sql, []);
+  return result[0];
+}
+
 async function obterPedidosFaturadosSQL(num_dias) {
   let config_id_marketplace = lib.config_id_marketplace();
   if (!num_dias) num_dias = 7;
@@ -80,7 +90,7 @@ async function procPedidoMktPlaceMercosSQL(items) {
       item?.condicao_pagamento_id ? item?.condicao_pagamento_id : 0
     );
     observacao += ` ${modalidade_entrega_nome} - ${prazo_entrega} `;
-    if (observacao) observacao = observacao.substring(0, 250);
+    if (observacao) observacao = observacao.substring(0, 240);
 
     if (condicao_pagamento_id > 0) {
       try {
@@ -142,15 +152,21 @@ async function procPedidoMktPlaceMercosSQL(items) {
 
 async function createPedidoSQL() {
   const pedidoRepository = new PedidoRepository(await TMongo.mongoConnect());
-  let filter = { sys_status: pedidoTypes.pendente };
-  let items = await pedidoRepository.findAll(filter);
+  //{data_emissao: '2025-01-09'}
 
-  //executar 1 script por vez ...
+  let items = await pedidoRepository.findAll({
+    sys_status: pedidoTypes.pendente,
+  });
+  let config_id_marketplace = lib.config_id_marketplace();
+
   for (let item of items) {
     await procPedidoMktPlaceMercosSQL([item]);
-    await pedidoRepository.update(item?.id, {
-      sys_status: pedidoTypes.processado,
-    });
+    let pedido = await pedidoJaCadastrado(item.id, config_id_marketplace);
+    if (pedido?.id > 0) {
+      await pedidoRepository.update(item?.id, {
+        sys_status: pedidoTypes.processado,
+      });
+    }
   }
 }
 
@@ -169,8 +185,8 @@ async function recebePedidosB2BUltimosDias() {
 
 async function insertPedido(items) {
   if (!items) return;
-  const pedidoRepository = new PedidoRepository(await TMongo.mongoConnect());
   if (!Array.isArray(items)) return;
+  const pedidoRepository = new PedidoRepository(await TMongo.mongoConnect());
   for (let item of items) {
     if (item?.status != "2") {
       console.log("Pedido nao esta faturado " + item.numero);
