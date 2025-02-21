@@ -39,6 +39,7 @@ class ProdutoMappers {
       largura: Number(payload.largura),
       altura: Number(payload.altura),
       comprimento: Number(payload.comprimento),
+      multiplo: 1,
     };
   }
 }
