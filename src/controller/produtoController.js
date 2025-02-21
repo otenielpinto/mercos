@@ -6,8 +6,11 @@ const mercosService = require("../services/mercosService");
 const TCategoriaMappers = require("../mappers/categoriaMappers");
 const TProdutoMappers = require("../mappers/produtoMappers");
 const TAnuncio = require("../repository/anuncioRepository");
+const TFilaEntrada = require("../repository/filaEntradaRepository");
 const TAnuncioTypes = require("../types/anuncioTypes");
 const TCategoriaController = require("./categoriaController");
+const TSystemService = require("../services/systemService");
+
 let LISTA_OF_CATEGORIAS = [];
 const MAX_CMD_SQL = 100;
 const MAX_RECORDS_LOTE = 300; //quantidade de registros por lote
@@ -16,6 +19,36 @@ async function updateAnuncioForced() {
   let cmd_sql = ` 
   SELECT * FROM MPK_UPDANUNCIOFORCED
   `;
+  return await fb5.executeQuery(cmd_sql, []);
+}
+
+async function enviarUltimosProdutosMovimentadoSQL() {
+  let cmd_sql = ` 
+  EXECUTE PROCEDURE MPK_PRODUTOMOVTO
+  `;
+  let rows = await fb5.executeQuery(cmd_sql, []);
+  return rows;
+}
+
+async function updateFilaVariacaoEntradaSQL() {
+  // Status 1 indica que o item foi enviado para fila de entrada
+  let enviado_fila = 1;
+  let cmd_sql = ` 
+  UPDATE MPK_VARIACAO SET STATUS=${enviado_fila} WHERE STATUS=0
+  `;
+
+  //Executa o lote de comandos SQL
+  return await fb5.executeQuery(cmd_sql, []);
+}
+
+async function updateFilaAnuncioEntradaSQL() {
+  // Status 1 indica que o item foi enviado para fila de entrada
+  let enviado_fila = 1;
+  let cmd_sql = ` 
+  UPDATE MPK_ANUNCIO SET STATUS=${enviado_fila} WHERE STATUS=0
+  `;
+
+  //Executa o lote de comandos SQL
   return await fb5.executeQuery(cmd_sql, []);
 }
 
@@ -51,23 +84,40 @@ async function updateEstoqueSQL(items) {
 }
 
 async function init() {
-  await updateAnuncioForced();
+  //envio a movimentacao dos produtos foram sincronizados dos ultimos dias 1 x ao dia
+  await enviarMovimentoUltimosDias();
+  try {
+    //isso aqui precisa ser bem rapido
+    await updateAnuncioForced();
+    //zero primeiro todos os produtos da variacao ( isso precisa ser muito rapido)
+    await updateFilaVariacaoEntradaSQL();
+  } catch (error) {
+    console.log("Houve um erro durante a preparacao dados");
+  }
 
   //modulo client
   if (lib.config_modulo_client() == 1) {
-    await enviarAnunciosPendente();
+    console.log("[Modulo cliente] Modulo cliente ativo");
+    await enviarParaFilaEntrada();
   }
+
+  //processar a fila de entrada ...
+  await processar_fila_entrada();
 
   //modulo servidor
   if (lib.config_modulo_server() == 1) {
+    console.log("[Modulo servidor] Vamos ajustar o estoque ...");
     await ajustar_estoque_em_lote();
+    console.log("[Modulo servidor] Vamos atualizar o preço");
     await enviarTodosAnunciosB2B();
   }
 
+  //Excluir os comentarios assim que o sistema ficar estavel  21-02-2025
+
   //Marcar produtos como processados
-  if (lib.config_modulo_client() == 1) {
-    await recebeAnunciosProcessado();
-  }
+  // if (lib.config_modulo_client() == 1) {
+  //   await recebeAnunciosProcessado();
+  // }
 
   // so quando estiver implantando  # precisa status=0 nos produtos que precisa atualizar
   //await enviarFotosEmLote();
@@ -166,34 +216,56 @@ async function enviarImagensProdutoById(id_anuncio) {
   return { ...retorno, status: result?.status, statusText: result?.statusText };
 }
 
-async function recebeAnunciosProcessado() {
-  const anuncio = new TAnuncio.MpkAnuncio(await TMongo.mongoConnect());
-  let processado = TAnuncioTypes.anuncioTypes.processado;
-  let items = await anuncio.findAllByIds({ status: processado });
-  console.log("Recebendo produtos processados", items?.length);
+async function processar_fila_entrada() {
+  let c = await TMongo.mongoConnect();
+  let fila = new TFilaEntrada.filaEntradaRepository(c);
+  let anuncio = new TAnuncio.MpkAnuncio(c);
 
-  if (!items) return;
-  let lote = [];
-
-  for (let item of items) {
-    lote.push(item);
-    if (lote.length < MAX_CMD_SQL) continue;
-    try {
-      await updateAnuncioSQL(lote);
-      await updateEstoqueSQL(lote);
-    } catch (error) {}
-    lote = [];
+  let rows = await fila.findAll({});
+  let updates = 0;
+  for (let row of rows) {
+    let retorno = await anuncio.update(row.id, row);
+    if (retorno.modifiedCount > 0) {
+      await fila.delete(row.id);
+      updates++;
+    }
   }
 
-  try {
-    await updateAnuncioSQL(lote);
-    await updateEstoqueSQL(lote);
-    lote = [];
-  } catch (error) {}
-
-  let concluido = TAnuncioTypes.anuncioTypes.concluido;
-  await anuncio.updateMany({ status: processado }, { status: concluido });
+  if (updates > 0) {
+    console.log(`${updates} registros foram atualizados.`);
+  } else {
+    console.log("Nenhum registro foi atualizado.");
+  }
 }
+
+// async function recebeAnunciosProcessado() {
+//   const anuncio = new TAnuncio.MpkAnuncio(await TMongo.mongoConnect());
+//   let processado = TAnuncioTypes.anuncioTypes.processado;
+//   let items = await anuncio.findAllByIds({ status: processado });
+//   console.log("Recebendo produtos processados", items?.length);
+
+//   if (!items) return;
+//   let lote = [];
+
+//   for (let item of items) {
+//     lote.push(item);
+//     if (lote.length < MAX_CMD_SQL) continue;
+//     try {
+//       await updateAnuncioSQL(lote);
+//       await updateEstoqueSQL(lote);
+//     } catch (error) {}
+//     lote = [];
+//   }
+
+//   try {
+//     await updateAnuncioSQL(lote);
+//     await updateEstoqueSQL(lote);
+//     lote = [];
+//   } catch (error) {}
+
+//   let concluido = TAnuncioTypes.anuncioTypes.concluido;
+//   await anuncio.updateMany({ status: processado }, { status: concluido });
+// }
 
 async function enviarTodosAnunciosB2B() {
   LISTA_OF_CATEGORIAS = [];
@@ -235,9 +307,9 @@ async function getAnuncios(
     id_anuncio,
   ]);
 }
-
-async function enviarAnunciosPendente() {
+async function enviarParaFilaEntrada() {
   const id_integracao = lib.config_id_integracao();
+  //Todo : Melhorar a velocidade do retorno ( esta demorando 3 segundos )
   const rows = await getAnuncios(
     id_integracao,
     0,
@@ -246,10 +318,21 @@ async function enviarAnunciosPendente() {
     0,
     " WHERE STATUS=0 "
   );
-  if (!rows || !Array.isArray(rows)) return;
-  const anuncio = new TAnuncio.MpkAnuncio(await TMongo.mongoConnect());
-  for (let row of rows) {
-    await anuncio.update(row?.id, row); // Ganhar velocidade instanciando apenas 1 X
+  console.log("Enviando anuncios para atualizar " + rows?.length);
+
+  //Envio o lote inteiro para gravar no servidor
+  const filaEntrada = new TFilaEntrada.filaEntradaRepository(
+    await TMongo.mongoConnect()
+  );
+  let retorno = await filaEntrada.insertMany(rows);
+
+  if (retorno?.insertedCount > 0) {
+    console.log(`${retorno.insertedCount} registros foram inseridos.`);
+
+    // Atualiza status dos produtos enviados para fila
+    await updateFilaAnuncioEntradaSQL();
+  } else {
+    console.log("Nenhum registro foi inserido.");
   }
 }
 
@@ -324,8 +407,23 @@ async function setB2BAnuncio(payload) {
   );
   detalhes_html = detalhes_html.substring(0, 5000);
   payload.detalhes_html = detalhes_html;
+  let body = null;
 
-  const body = TProdutoMappers.ProdutoMappers.toMercos(payload);
+  //Preciso executar assim
+  try {
+    body = TProdutoMappers.ProdutoMappers.toMercos(payload);
+  } catch (error) {
+    console.log(
+      "O mapeamento de campos para Mercos retornou com erros.",
+      error?.message
+    );
+  }
+
+  //gerou um problema , que não estava atualizando nenhum produto devido ao erro de conversao
+  if (!body) {
+    return;
+  }
+
   if (body.categoria_id == 0) delete body.categoria_id;
 
   //teste para obter 429
@@ -425,6 +523,19 @@ const doGetAnuncioB2B = async (req, res) => {
     });
   }
 };
+
+async function enviarMovimentoUltimosDias() {
+  let id_tenant = lib.config_id_integracao();
+  try {
+    if (
+      (await TSystemService.started(id_tenant, "EnviarUltimos7DiasMovto")) == 0
+    ) {
+      await enviarUltimosProdutosMovimentadoSQL();
+    }
+  } catch (error) {
+    console.log("O processamento retornou erro", error?.message);
+  }
+}
 
 module.exports = {
   init,

@@ -12,7 +12,11 @@ class ProdutoMappers {
     let detalhes_html = payload?.detalhes_html;
     let ativo = payload?.vender_web == "S";
     let excluido = false;
+    let preco = Number(payload.preco) ? Number(payload.preco) : 0;
     if (payload?.descricao.startsWith(".")) ativo = false;
+    if (preco < 0.5) {
+      preco = 99999;
+    }
 
     return {
       nome: payload.descricao.substring(0, 100),

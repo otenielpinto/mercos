@@ -64,14 +64,10 @@ async function init() {
   // await produtoController.init();
   // await clienteController.init();
 
-  //await tabelaPrecoController.init();
-  //await produtoController.init();
-
   //await pedidoController.init();
 
   // await tarefaContinua();
   // console.log("Fim " + lib.currentDateTimeStr());
-  // return;
 
   try {
     let time = process.env.CRON_JOB_TIME || 10; //tempo em minutos
