@@ -224,7 +224,10 @@ async function processar_fila_entrada() {
   let rows = await fila.findAll({});
   let updates = 0;
   for (let row of rows) {
+    //nao é permitido atualizar esse campo no mongodb db . ok
+    if (row._id) delete row._id;
     let retorno = await anuncio.update(row.id, row);
+
     if (retorno.modifiedCount > 0) {
       await fila.delete(row.id);
       updates++;
