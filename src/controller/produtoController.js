@@ -15,9 +15,16 @@ let LISTA_OF_CATEGORIAS = [];
 const MAX_CMD_SQL = 100;
 const MAX_RECORDS_LOTE = 300; //quantidade de registros por lote
 
-async function updateAnuncioForced() {
+async function updateAnuncioForcedSQL() {
   let cmd_sql = ` 
   SELECT * FROM MPK_UPDANUNCIOFORCED
+  `;
+  return await fb5.executeQuery(cmd_sql, []);
+}
+
+async function gerenciarPromocaoSQL() {
+  let cmd_sql = ` 
+  EXECUTE PROCEDURE MPK_PROMOCAO_VALIDAR_SITE
   `;
   return await fb5.executeQuery(cmd_sql, []);
 }
@@ -83,12 +90,24 @@ async function updateEstoqueSQL(items) {
   await fb5.executeArraySQL(lote);
 }
 
+async function tarefasDiarias() {
+  await enviarMovimentoUltimosDias();
+
+  let id_tenant = lib.config_id_integracao();
+  if ((await TSystemService.started(id_tenant, "gerenciar_promocao")) == 1)
+    return;
+
+  //executa no banco local
+  await gerenciarPromocaoSQL();
+}
+
 async function init() {
   //envio a movimentacao dos produtos foram sincronizados dos ultimos dias 1 x ao dia
-  await enviarMovimentoUltimosDias();
+  await tarefasDiarias();
+
   try {
     //isso aqui precisa ser bem rapido
-    await updateAnuncioForced();
+    await updateAnuncioForcedSQL();
     //zero primeiro todos os produtos da variacao ( isso precisa ser muito rapido)
     await updateFilaVariacaoEntradaSQL();
   } catch (error) {
@@ -112,14 +131,6 @@ async function init() {
     await enviarTodosAnunciosB2B();
   }
 
-  //Excluir os comentarios assim que o sistema ficar estavel  21-02-2025
-
-  //Marcar produtos como processados
-  // if (lib.config_modulo_client() == 1) {
-  //   await recebeAnunciosProcessado();
-  // }
-
-  // so quando estiver implantando  # precisa status=0 nos produtos que precisa atualizar
   //await enviarFotosEmLote();
 }
 
@@ -529,12 +540,11 @@ const doGetAnuncioB2B = async (req, res) => {
 
 async function enviarMovimentoUltimosDias() {
   let id_tenant = lib.config_id_integracao();
+  if ((await TSystemService.started(id_tenant, "EnviarUltimos7DiasMovto")) == 1)
+    return;
+
   try {
-    if (
-      (await TSystemService.started(id_tenant, "EnviarUltimos7DiasMovto")) == 0
-    ) {
-      await enviarUltimosProdutosMovimentadoSQL();
-    }
+    await enviarUltimosProdutosMovimentadoSQL();
   } catch (error) {
     console.log("O processamento retornou erro", error?.message);
   }
