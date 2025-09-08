@@ -22,13 +22,31 @@ Este projeto visa a integração de sistemas internos com a API do Mercos, uma p
 - **JWT (JSON Web Tokens):** Para autenticação e autorização seguras.
 - **MongoDB:** Para registro de logs de operações e monitoramento da integração.
 
-## Benefícios Esperados
+## Ambiente de Testes (Sandbox)
 
-- Redução significativa de tempo e custo operacional.
-- Melhoria na precisão dos dados e na eficiência dos processos.
-- Flexibilidade para adaptação futura a novas funcionalidades da API Mercos.
+Para testes e desenvolvimento, utilize o ambiente sandbox da Mercos:
 
-## Material de referencias
+**URL Base:** `https://sandbox.mercos.com`
+
+**Tokens de Autenticação:**
+
+- **Application Token:** Gerado pela Mercos
+- **Company Token:** Gerado pela Mercos
+
+### Configuração do Ambiente
+
+No arquivo `.env`, descomente e configure as variáveis para o ambiente de homologação:
+
+```bash
+# HOMOLOGAÇÃO/SANDBOX
+MERCOS_APPLICATION_TOKEN={gerado pela mercos}
+MERCOS_COMPANY_TOKEN={gerado pela mercos}
+MERCOS_BASE_URL=https://sandbox.mercos.com/api/
+```
+
+Para alternar entre produção e sandbox, comente/descomente as respectivas seções no arquivo `.env`.
+
+## Material de Referências
 
 - <https://mercos.docs.apiary.io/#>
 - <https://mercos.com/>

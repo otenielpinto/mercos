@@ -3,6 +3,7 @@
 //Exemplo    produto : TProduto ;
 const lib = require("../utils/lib");
 const MOEDA_ANUNCIO = "0";
+const PRECO_DEFAULT = 999999;
 
 class ProdutoMappers {
   //Explicacao static ( nao preciso de instanciar a classe )
@@ -12,10 +13,13 @@ class ProdutoMappers {
     let detalhes_html = payload?.detalhes_html;
     let ativo = payload?.vender_web == "S";
     let excluido = false;
-    let preco = Number(payload.preco) ? Number(payload.preco) : 0;
+    //let preco = Number(payload.preco) ? Number(payload.preco) : 0;
+    let preco = Number(payload.preco_original)
+      ? Number(payload.preco_original)
+      : PRECO_DEFAULT;
     if (payload?.descricao.startsWith(".")) ativo = false;
     if (preco < 0.5) {
-      preco = 99999;
+      preco = PRECO_DEFAULT;
     }
 
     return {

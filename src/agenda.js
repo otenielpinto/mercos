@@ -11,6 +11,7 @@ const clienteController = require("./controller/clienteController");
 const condPagamentoController = require("./controller/condPagamentoController");
 const faturaController = require("./controller/faturaController");
 const tabelaPrecoController = require("./controller/tabelaPrecoController");
+const promocaoController = require("./controller/promocaoController");
 
 global.processandoNow = 0;
 global.tarefaContinua = 0;
@@ -46,6 +47,7 @@ async function task() {
   } finally {
     await faturaController.init();
     await produtoController.init();
+    await promocaoController.init();
     await diversosController.init();
     await clienteController.init();
 
@@ -65,9 +67,11 @@ async function init() {
   // await clienteController.init();
   //await pedidoController.init();
 
+  await promocaoController.init();
+
   // await tarefaContinua();
-  // console.log("Fim " + lib.currentDateTimeStr());
-  // return;
+  console.log("Fim " + lib.currentDateTimeStr());
+  return;
 
   try {
     let time = process.env.CRON_JOB_TIME || 10; //tempo em minutos

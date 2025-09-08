@@ -5,11 +5,14 @@ const lib = require("../utils/lib");
 const mercosService = require("../services/mercosService");
 const TCategoriaMappers = require("../mappers/categoriaMappers");
 const TProdutoMappers = require("../mappers/produtoMappers");
-const TAnuncio = require("../repository/anuncioRepository");
-const TFilaEntrada = require("../repository/filaEntradaRepository");
+const { MpkAnuncio } = require("../repository/anuncioRepository");
+const {
+  FilaEntradaRepository,
+} = require("../repository/filaEntradaRepository");
 const TAnuncioTypes = require("../types/anuncioTypes");
 const TCategoriaController = require("./categoriaController");
 const TSystemService = require("../services/systemService");
+const { inserirFilaPromocao } = require("./promocaoController");
 
 let LISTA_OF_CATEGORIAS = [];
 const MAX_CMD_SQL = 100;
@@ -135,7 +138,7 @@ async function init() {
 }
 
 async function ajustar_estoque_em_lote() {
-  const anuncio = new TAnuncio.MpkAnuncio(await TMongo.mongoConnect());
+  const anuncio = new MpkAnuncio();
   const rows = await anuncio.findAll({
     status: TAnuncioTypes.anuncioTypes.pendente,
   });
@@ -168,7 +171,7 @@ async function ajustar_estoque_em_lote() {
 }
 
 async function enviarFotosEmLote() {
-  const anuncio = new TAnuncio.MpkAnuncio(await TMongo.mongoConnect());
+  const anuncio = new MpkAnuncio();
   const rows = await anuncio.findAll({
     status: TAnuncioTypes.anuncioTypes.pendente,
   });
@@ -228,9 +231,8 @@ async function enviarImagensProdutoById(id_anuncio) {
 }
 
 async function processar_fila_entrada() {
-  let c = await TMongo.mongoConnect();
-  let fila = new TFilaEntrada.filaEntradaRepository(c);
-  let anuncio = new TAnuncio.MpkAnuncio(c);
+  let fila = new FilaEntradaRepository();
+  let anuncio = new MpkAnuncio();
 
   let rows = await fila.findAll({});
   let updates = 0;
@@ -253,7 +255,7 @@ async function processar_fila_entrada() {
 }
 
 // async function recebeAnunciosProcessado() {
-//   const anuncio = new TAnuncio.MpkAnuncio(await TMongo.mongoConnect());
+//   const anuncio = new MpkAnuncio();
 //   let processado = TAnuncioTypes.anuncioTypes.processado;
 //   let items = await anuncio.findAllByIds({ status: processado });
 //   console.log("Recebendo produtos processados", items?.length);
@@ -283,19 +285,28 @@ async function processar_fila_entrada() {
 
 async function enviarTodosAnunciosB2B() {
   LISTA_OF_CATEGORIAS = [];
-  const anuncio = new TAnuncio.MpkAnuncio(await TMongo.mongoConnect());
+  const anuncio = new MpkAnuncio();
   const rows = await anuncio.findAll({
     status: TAnuncioTypes.anuncioTypes.pendente,
   });
-
   if (!rows) return;
+
+  try {
+    await inserirFilaPromocao(rows);
+  } catch (error) {
+    console.log(
+      "O processamento retornou erro ao inserir na fila de promoção",
+      error?.message
+    );
+  }
+
   for (let row of rows) {
     await setB2BAnuncio(row);
   }
 }
 
 async function getAnuncioB2bById(id_anuncio) {
-  const anuncio = new TAnuncio.MpkAnuncio(await TMongo.mongoConnect());
+  const anuncio = new MpkAnuncio();
   return await anuncio.findById(id_anuncio);
 }
 
@@ -335,9 +346,7 @@ async function enviarParaFilaEntrada() {
   console.log("Enviando anuncios para atualizar " + rows?.length);
 
   //Envio o lote inteiro para gravar no servidor
-  const filaEntrada = new TFilaEntrada.filaEntradaRepository(
-    await TMongo.mongoConnect()
-  );
+  const filaEntrada = new FilaEntradaRepository();
   let retorno = await filaEntrada.insertMany(rows);
 
   if (retorno?.insertedCount > 0) {
@@ -351,7 +360,7 @@ async function enviarParaFilaEntrada() {
 }
 
 async function setAnuncio(payload) {
-  const anuncio = new TAnuncio.MpkAnuncio(await TMongo.mongoConnect());
+  const anuncio = new MpkAnuncio();
   return await anuncio.update(payload?.id, payload);
 }
 
