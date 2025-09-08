@@ -249,7 +249,11 @@ async function autoLimpezaPromocoesApiMercos() {
     }
   }
 }
-
+/*
+  Essa function cruza as promocoes  com os anuncios e verifica se o preco promocional
+  ainda esta vigente, caso o preco promocional seja zero ou nulo, a promocao sera excluida
+  sera executada uma vez ao dia
+*/
 async function autoLimpezaPromocoes() {
   let promocoes = await getAllPromocoes();
   if (!Array.isArray(promocoes) || promocoes.length == 0) return;
