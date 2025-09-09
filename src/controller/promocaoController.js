@@ -309,7 +309,7 @@ async function updatePromocao(id_promocao, payload) {
   for (let i = 1; i < MAX_TENTATIVAS; i++) {
     result = await mercosService.updatePromocoes(id_promocao, body);
     if ((await lib.tratarRetorno(result, 200)) == 200) {
-      body.id_promocao = result?.data?.id;
+      payload.id_promocao = result?.data?.id;
 
       if (excluido) {
         await promocaoRepo.delete(id);
