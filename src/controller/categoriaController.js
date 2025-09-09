@@ -1,9 +1,8 @@
-const TCategoria = require("../repository/categoriaRepository");
-const TMongo = require("../infra/mongoClient");
+const { CategoriaRepository } = require("../repository/categoriaRepository");
 const fb5 = require("../infra/fb5");
 const lib = require("../utils/lib");
 const mercosService = require("../services/mercosService");
-const CategoriaMappers = require("../mappers/categoriaMappers");
+const { CategoriaMappers } = require("../mappers/categoriaMappers");
 const systemService = require("../services/systemService");
 
 async function init() {
@@ -17,23 +16,15 @@ async function init() {
   return getCategorias();
 }
 
-//public
-
 async function getCategorias() {
-  const categoria = new TCategoria.CategoriaRepository(
-    await TMongo.mongoConnect()
-  );
-
+  const categoria = new CategoriaRepository();
   return await categoria.findAll();
 }
 
 async function setCategorias() {
   let rows = await fb5.openQuery("WCATEGORY", "*", "1=1", []);
   if (!rows) return;
-
-  const categoria = new TCategoria.CategoriaRepository(
-    await TMongo.mongoConnect()
-  );
+  const categoria = new CategoriaRepository();
 
   for (let row of rows) {
     await categoria.create(row);
@@ -41,9 +32,7 @@ async function setCategorias() {
 }
 
 async function getCategoriasB2B() {
-  const categoria = new TCategoria.CategoriaRepository(
-    await TMongo.mongoConnect()
-  );
+  const categoria = new CategoriaRepository();
 
   //busco categorias do mercos
   let result = null;
@@ -82,16 +71,14 @@ async function getCategoriasB2B() {
 }
 
 async function setCategoriasB2B() {
-  const categoria = new TCategoria.CategoriaRepository(
-    await TMongo.mongoConnect()
-  );
+  const categoria = new CategoriaRepository();
 
   let result = null;
   let items = await categoria.findAll();
   if (!Array.isArray(items)) return;
 
   for (let item of items) {
-    let payload = CategoriaMappers.CategoriaMappers.toMercos(item);
+    let payload = CategoriaMappers.toMercos(item);
     result = null;
     if (payload?.id === 0) {
       delete payload?.id;

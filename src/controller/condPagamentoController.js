@@ -1,11 +1,9 @@
 const lib = require("../utils/lib");
-const fb5 = require("../infra/fb5");
 const mercosService = require("../services/mercosService");
 const systemService = require("../services/systemService");
 const {
   CondPagamentoRepository,
 } = require("../repository/condPagamentoRepository");
-const TMongo = require("../infra/mongoClient");
 
 async function init() {
   if ((await systemService.started(1, "cond_pagamento")) == 1) return;
@@ -13,8 +11,7 @@ async function init() {
 }
 
 async function importarCondPagamento() {
-  const c = await TMongo.mongoConnect();
-  let condPagamentoRepository = new CondPagamentoRepository(c);
+  let condPagamentoRepository = new CondPagamentoRepository();
   let lote = [];
   let alterado_apos = null;
   let result = null;

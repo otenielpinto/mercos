@@ -3,13 +3,13 @@ const { fbImageByIdProduto } = require("../infra/fbImage");
 const fb5 = require("../infra/fb5");
 const lib = require("../utils/lib");
 const mercosService = require("../services/mercosService");
-const TCategoriaMappers = require("../mappers/categoriaMappers");
-const TProdutoMappers = require("../mappers/produtoMappers");
+const { CategoriaMappers } = require("../mappers/categoriaMappers");
+const { ProdutoMappers } = require("../mappers/produtoMappers");
 const { MpkAnuncio } = require("../repository/anuncioRepository");
 const {
   FilaEntradaRepository,
 } = require("../repository/filaEntradaRepository");
-const TAnuncioTypes = require("../types/anuncioTypes");
+const { anuncioTypes } = require("../types/anuncioTypes");
 const TCategoriaController = require("./categoriaController");
 const TSystemService = require("../services/systemService");
 const { inserirFilaPromocao } = require("./promocaoController");
@@ -140,7 +140,7 @@ async function init() {
 async function ajustar_estoque_em_lote() {
   const anuncio = new MpkAnuncio();
   const rows = await anuncio.findAll({
-    status: TAnuncioTypes.anuncioTypes.pendente,
+    status: anuncioTypes.pendente,
   });
   let result;
   let lote = [];
@@ -173,13 +173,13 @@ async function ajustar_estoque_em_lote() {
 async function enviarFotosEmLote() {
   const anuncio = new MpkAnuncio();
   const rows = await anuncio.findAll({
-    status: TAnuncioTypes.anuncioTypes.pendente,
+    status: anuncioTypes.pendente,
   });
 
   if (!rows) return;
   for (let row of rows) {
     let payload = {
-      status: TAnuncioTypes.anuncioTypes.processado,
+      status: anuncioTypes.processado,
     };
     console.log(`Enviando imagem sku[${row?.sku}]`);
     try {
@@ -256,7 +256,7 @@ async function processar_fila_entrada() {
 
 // async function recebeAnunciosProcessado() {
 //   const anuncio = new MpkAnuncio();
-//   let processado = TAnuncioTypes.anuncioTypes.processado;
+//   let processado = anuncioTypes.processado;
 //   let items = await anuncio.findAllByIds({ status: processado });
 //   console.log("Recebendo produtos processados", items?.length);
 
@@ -279,7 +279,7 @@ async function processar_fila_entrada() {
 //     lote = [];
 //   } catch (error) {}
 
-//   let concluido = TAnuncioTypes.anuncioTypes.concluido;
+//   let concluido = anuncioTypes.concluido;
 //   await anuncio.updateMany({ status: processado }, { status: concluido });
 // }
 
@@ -287,7 +287,7 @@ async function enviarTodosAnunciosB2B() {
   LISTA_OF_CATEGORIAS = [];
   const anuncio = new MpkAnuncio();
   const rows = await anuncio.findAll({
-    status: TAnuncioTypes.anuncioTypes.pendente,
+    status: anuncioTypes.pendente,
   });
   if (!rows) return;
 
@@ -434,7 +434,7 @@ async function setB2BAnuncio(payload) {
 
   //Preciso executar assim
   try {
-    body = TProdutoMappers.ProdutoMappers.toMercos(payload);
+    body = ProdutoMappers.toMercos(payload);
   } catch (error) {
     console.log(
       "O mapeamento de campos para Mercos retornou com erros.",
@@ -465,7 +465,7 @@ async function setB2BAnuncio(payload) {
       let { status } = result;
       if (status == 200) {
         payload.id_categoriaweb = id_categoria;
-        payload.status = TAnuncioTypes.anuncioTypes.processado;
+        payload.status = anuncioTypes.processado;
         await setAnuncio(payload);
         console.log("produto atualizado no Mercos " + payload?.meuspedidosid);
       }
@@ -484,7 +484,7 @@ async function setB2BAnuncio(payload) {
       if (status == 201) {
         payload.id_categoriaweb = id_categoria;
         payload.meuspedidosid = Number(headers["meuspedidosid"]);
-        payload.status = TAnuncioTypes.anuncioTypes.processado;
+        payload.status = anuncioTypes.processado;
         let m = payload?.meuspedidosid + " " + lib.currentDateTimeStr();
         await setAnuncio(payload);
         console.log("produto cadastrado no Mercos " + m);

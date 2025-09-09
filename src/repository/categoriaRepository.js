@@ -1,13 +1,23 @@
 //Classe tem letras maiuculoas
+const TMongo = require("../infra/mongoClient");
 
 const collection = "wcategory";
 
 class CategoriaRepository {
-  constructor(db) {
-    this.db = db;
+  constructor() {
+    this.db = null;
+  }
+
+  // Método interno para obter conexão com o banco
+  async _getConnection() {
+    if (!this.db) {
+      this.db = await TMongo.mongoConnect();
+    }
+    return this.db;
   }
 
   async create(payload) {
+    await this._getConnection();
     //ja existe o objeto nao fazer nada
     const obj = await this.findById(payload?.id);
     if (obj?.id > 0) return;
@@ -17,6 +27,7 @@ class CategoriaRepository {
   }
 
   async update(id, payload) {
+    await this._getConnection();
     const result = await this.db
       .collection(collection)
       .updateOne({ id: id }, { $set: payload });
@@ -24,25 +35,30 @@ class CategoriaRepository {
   }
 
   async delete(id) {
+    await this._getConnection();
     const result = await this.db.collection(collection).deleteOne({ id: id });
     return result.deletedCount > 0;
   }
 
   async findAll(criterio = {}) {
+    await this._getConnection();
     return await this.db.collection(collection).find(criterio).toArray();
   }
 
   async findById(id) {
+    await this._getConnection();
     return await this.db.collection(collection).findOne({ id: Number(id) });
   }
 
   async findByDescricao(descricao) {
+    await this._getConnection();
     return await this.db
       .collection(collection)
       .findOne({ descricao: descricao });
   }
 
   async insertMany(items) {
+    await this._getConnection();
     if (!Array.isArray(items)) return null;
     try {
       return await this.db.collection(collection).insertMany(items);
@@ -52,6 +68,7 @@ class CategoriaRepository {
   }
 
   async deleteMany(criterio = {}) {
+    await this._getConnection();
     try {
       return await this.db.collection(collection).deleteMany(criterio);
     } catch (e) {
