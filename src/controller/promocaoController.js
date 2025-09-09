@@ -54,8 +54,8 @@ async function setPromocao(item) {
   let preco_original = Number(item.preco_original) ?? 0;
   let preco_promocional = Number(item.preco_promocional) ?? 0;
   let desconto = Number(item.desconto) ?? 0;
-  let data_inicial = item.data_inicial;
-  let data_final = item.data_final;
+  let data_inicial = formatarData(item.data_inicial);
+  let data_final = formatarData(item.data_final);
   let id_promocao = promocaoExists?.id_promocao
     ? promocaoExists?.id_promocao
     : null;
@@ -68,8 +68,8 @@ async function setPromocao(item) {
 
   let body = {
     nome: "promocao-" + item.sku,
-    data_inicial: formatarData(data_inicial),
-    data_final: formatarData(data_final),
+    data_inicial: data_inicial,
+    data_final: data_final,
     excluido: excluido,
     regras: [
       {
@@ -95,6 +95,7 @@ async function setPromocao(item) {
   }
 
   if (!id_promocao || id_promocao == null) {
+    if (body.excluido) delete body.excluido; //nao pode enviar o campo excluido na criacao da promocao
     for (let i = 1; i < MAX_TENTATIVAS; i++) {
       result = await mercosService.createPromocoes(body);
       if ((await lib.tratarRetorno(result, 201)) == 201) {
@@ -121,12 +122,12 @@ function calcularPercentualDesconto(precoOriginal, precoPromocional) {
 function formatarData(data) {
   if (!data) return null;
 
-  const options = { year: "numeric", month: "2-digit", day: "2-digit" };
-  return new Date(data)
-    .toLocaleDateString("pt-BR", options)
-    .replace(/\//g, "-");
+  const d = new Date(data);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
-
 //filtar os produtos que estao em promocao
 async function mapperToPromocoes(items) {
   if (!Array.isArray(items) || items.length == 0) return [];
@@ -144,8 +145,8 @@ async function mapperToPromocoes(items) {
     let sku = p.sku;
     let data_inicial = null;
     let data_final = null;
-    if (p?.data_promocao_ini) data_inicial = p.data_promocao_ini;
-    if (p?.data_promocao_fim) data_final = p.data_promocao_fim;
+    if (p?.dt_promocao_ini) data_inicial = p.dt_promocao_ini;
+    if (p?.dt_promocao_fim) data_final = p.dt_promocao_fim;
 
     if (
       !id_anuncio_mktplace ||
@@ -153,8 +154,13 @@ async function mapperToPromocoes(items) {
       preco_original == 0 ||
       data_inicial == null ||
       data_final == null
-    )
+    ) {
+      console.log(
+        "Produto sem informacoes suficientes para promocao: ",
+        p.codigo
+      );
       continue;
+    }
 
     if (preco_promocional < preco_original) {
       let desconto = calcularPercentualDesconto(
@@ -181,8 +187,6 @@ async function mapperToPromocoes(items) {
 
 //esta function é acionada dentro do produtoController atraves do gatilho update preço  29-08-2025
 async function inserirFilaPromocao(produtos) {
-  if (!Array.isArray(produtos) || produtos.length == 0) return;
-
   let promocoes = await mapperToPromocoes(produtos);
   const filaPromocao = new FilaPromocaoRepository();
   await filaPromocao.insertMany(promocoes);

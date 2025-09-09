@@ -17,13 +17,13 @@ class ProdutoMappers {
     let preco = Number(payload.preco_original)
       ? Number(payload.preco_original)
       : PRECO_DEFAULT;
-    if (payload?.descricao.startsWith(".")) ativo = false;
+    if (payload?.descricao?.startsWith(".")) ativo = false;
     if (preco < 0.5) {
       preco = PRECO_DEFAULT;
     }
 
     return {
-      nome: payload.descricao.substring(0, 100),
+      nome: payload?.descricao?.substring(0, 100),
       preco_tabela: Number(payload.preco),
       codigo: payload.sku,
       comissao: null,

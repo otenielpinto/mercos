@@ -289,6 +289,7 @@ async function enviarTodosAnunciosB2B() {
   const rows = await anuncio.findAll({
     status: anuncioTypes.pendente,
   });
+
   if (!rows) return;
 
   try {
