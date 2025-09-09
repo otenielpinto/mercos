@@ -95,9 +95,10 @@ async function setPromocao(item) {
   }
 
   if (!id_promocao || id_promocao == null) {
-    if (body.excluido) delete body.excluido; //nao pode enviar o campo excluido na criacao da promocao
+    delete body.excluido; //nao pode enviar o campo excluido na criacao da promocao
     for (let i = 1; i < MAX_TENTATIVAS; i++) {
       result = await mercosService.createPromocoes(body);
+      //console.log(result?.response?.data);
       if ((await lib.tratarRetorno(result, 201)) == 201) {
         body.id_promocao = result?.data?.id;
         await promocaoRepo.create(body);
