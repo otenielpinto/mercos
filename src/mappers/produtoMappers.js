@@ -24,7 +24,7 @@ class ProdutoMappers {
 
     return {
       nome: payload?.descricao?.substring(0, 100),
-      preco_tabela: Number(payload.preco),
+      preco_tabela: Number(preco),
       codigo: payload.sku,
       comissao: null,
       ipi: null,
