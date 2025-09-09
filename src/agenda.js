@@ -67,11 +67,11 @@ async function init() {
   // await clienteController.init();
   //await pedidoController.init();
 
-  await promocaoController.init();
+  //await promocaoController.init();
 
   // await tarefaContinua();
-  console.log("Fim " + lib.currentDateTimeStr());
-  return;
+  //console.log("Fim " + lib.currentDateTimeStr());
+  //return;
 
   try {
     let time = process.env.CRON_JOB_TIME || 10; //tempo em minutos
