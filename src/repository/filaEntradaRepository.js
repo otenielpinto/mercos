@@ -5,7 +5,7 @@ const collection = "tmp_fila_entrada";
 
 class FilaEntradaRepository {
   constructor() {
-    this.db = db;
+    this.db = null;
   }
 
   // Método interno para obter conexão com o banco

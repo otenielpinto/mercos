@@ -64,12 +64,11 @@ async function init() {
   //await pedidoController.init();
   // await diversosController.init();
   //await produtoController.init();
+  //await promocaoController.init();
   // await clienteController.init();
   //await pedidoController.init();
 
-  //await promocaoController.init();
-
-  // await tarefaContinua();
+  //await tarefaContinua();
   //console.log("Fim " + lib.currentDateTimeStr());
   //return;
 
