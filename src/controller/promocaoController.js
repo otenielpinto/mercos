@@ -67,7 +67,7 @@ async function setPromocao(item) {
   }
 
   let body = {
-    nome: "promocao-" + item.sku,
+    nome: "promocao",
     data_inicial: data_inicial,
     data_final: data_final,
     excluido: excluido,
@@ -235,7 +235,7 @@ async function autoLimpezaPromocoesApiMercos() {
 
     if (fimPromocao) {
       let body = {
-        nome: "promocao-" + promocao.sku,
+        nome: "promocao",
         data_inicial: promocao.data_inicial,
         data_final: promocao.data_final,
         excluido: true,
@@ -292,7 +292,7 @@ async function updatePromocao(id_promocao, payload) {
   let excluido = data_final < hoje;
 
   let body = {
-    nome: "promocao-" + payload.sku,
+    nome: "promocao",
     data_inicial: formatarData(payload.data_inicial),
     data_final: formatarData(payload.data_final),
     excluido: excluido,
