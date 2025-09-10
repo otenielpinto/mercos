@@ -429,7 +429,7 @@ async function setB2BAnuncio(payload) {
   let detalhes_html = String(
     payload?.detalhes_html ? payload?.detalhes_html : ""
   );
-  detalhes_html = detalhes_html.substring(0, 5000);
+  detalhes_html = detalhes_html?.substring(0, 5000);
   payload.detalhes_html = detalhes_html;
   let body = null;
 
@@ -447,20 +447,13 @@ async function setB2BAnuncio(payload) {
   if (!body) {
     return;
   }
-
   if (body.categoria_id == 0) delete body.categoria_id;
-
-  //teste para obter 429
-  // for (let i = 1; i < 10; i++) {
-  //   let r = await mercosService.getProdutos("");
-  // }
 
   if (meuspedidosid > 0) {
     try {
       for (let i = 1; i < 10; i++) {
         result = await mercosService.updateProdutos(meuspedidosid, body);
         if ((await lib.tratarRetorno(result, 200)) == 200) {
-          console.log(result?.data);
           break;
         }
       }
