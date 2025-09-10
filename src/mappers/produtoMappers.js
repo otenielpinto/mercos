@@ -13,11 +13,21 @@ class ProdutoMappers {
     let detalhes_html = payload?.detalhes_html;
     let ativo = payload?.vender_web == "S";
     let excluido = false;
-    //let preco = Number(payload.preco) ? Number(payload.preco) : 0;
-    let preco = Number(payload.preco_original)
-      ? Number(payload.preco_original)
-      : PRECO_DEFAULT;
     if (payload?.descricao?.startsWith(".")) ativo = false;
+
+    let preco = Number(payload.preco) ? Number(payload.preco) : 0;
+    let preco_promocional = Number(payload.preco_promocional)
+      ? Number(payload.preco_promocional)
+      : 0;
+    let preco_original = Number(payload.preco_original)
+      ? Number(payload.preco_original)
+      : 0;
+
+    //no mercos preciso enviar assim
+    if (preco_promocional > 0 && preco_original > 0) {
+      preco = preco_original;
+    }
+
     if (preco < 0.5) {
       preco = PRECO_DEFAULT;
     }
