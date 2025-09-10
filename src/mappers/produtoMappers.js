@@ -28,7 +28,7 @@ class ProdutoMappers {
       preco = preco_original;
     }
 
-    if (preco < 0.5) {
+    if (preco < 0.1) {
       preco = PRECO_DEFAULT;
     }
 
