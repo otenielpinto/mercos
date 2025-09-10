@@ -459,7 +459,10 @@ async function setB2BAnuncio(payload) {
     try {
       for (let i = 1; i < 10; i++) {
         result = await mercosService.updateProdutos(meuspedidosid, body);
-        if ((await lib.tratarRetorno(result, 200)) == 200) break;
+        if ((await lib.tratarRetorno(result, 200)) == 200) {
+          console.log(result?.data);
+          break;
+        }
       }
 
       if (!result) return;

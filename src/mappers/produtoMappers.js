@@ -30,6 +30,7 @@ class ProdutoMappers {
 
     if (preco < 0.1) {
       preco = PRECO_DEFAULT;
+      console.log("Mapper produto " + payload.sku + " Preço: " + preco);
     }
 
     return {
