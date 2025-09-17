@@ -12,7 +12,6 @@ const {
 const { anuncioTypes } = require("../types/anuncioTypes");
 const TCategoriaController = require("./categoriaController");
 const TSystemService = require("../services/systemService");
-const { inserirFilaPromocao } = require("./promocaoController");
 
 let LISTA_OF_CATEGORIAS = [];
 const MAX_CMD_SQL = 100;
@@ -291,16 +290,6 @@ async function enviarTodosAnunciosB2B() {
   });
 
   if (!rows) return;
-
-  try {
-    await inserirFilaPromocao(rows);
-  } catch (error) {
-    console.log(
-      "O processamento retornou erro ao inserir na fila de promoção",
-      error?.message
-    );
-  }
-
   for (let row of rows) {
     await setB2BAnuncio(row);
   }

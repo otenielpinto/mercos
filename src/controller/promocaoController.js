@@ -6,23 +6,10 @@ const {
 const { PromocaoRepository } = require("../repository/promocaoRepository");
 const { MpkAnuncio } = require("../repository/anuncioRepository");
 const TSystemService = require("../services/systemService");
-
 const MAX_TENTATIVAS = 10;
 
 async function init() {
-  await tarefasDiarias();
-  console.log("processando fila de promocao");
-  await processarFilaPromocao();
-}
-
-async function tarefasDiarias() {
-  let id_tenant = lib.config_id_integracao();
-
-  if ((await TSystemService.started(id_tenant, "auto_limpeza_promocao")) == 1)
-    return;
-
-  console.log("processando auto limpeza de promocoes");
-  await autoLimpezaPromocoes();
+  await setPromocaoVigente();
 }
 
 //processar as filas de promocao
@@ -33,81 +20,10 @@ async function processarFilaPromocao() {
   if (!Array.isArray(filas) || filas.length == 0) return;
 
   for (let fila of filas) {
-    let response = await setPromocao(fila);
-    if (response) {
-      console.log("Promocao processada com sucesso: ", fila.sku);
-      await filaPromocao.delete(fila.id);
-    }
   }
 
   console.log("fim do processamento da fila de promocao");
   return;
-}
-
-async function setPromocao(item) {
-  if (!item) return true;
-  let result = null;
-
-  const promocaoRepo = new PromocaoRepository();
-  let promocaoExists = await promocaoRepo.findBySku(item.sku);
-
-  let preco_original = Number(item.preco_original) ?? 0;
-  let preco_promocional = Number(item.preco_promocional) ?? 0;
-  let desconto = Number(item.desconto) ?? 0;
-  let data_inicial = formatarData(item.data_inicial);
-  let data_final = formatarData(item.data_final);
-  let id_promocao = promocaoExists?.id_promocao
-    ? promocaoExists?.id_promocao
-    : null;
-  let excluido = data_final < new Date();
-
-  if (!id_promocao && excluido == true) {
-    //se nao existe a promocao e ja esta excluida, nada a fazer
-    return true;
-  }
-
-  let body = {
-    nome: "promocao",
-    data_inicial: data_inicial,
-    data_final: data_final,
-    excluido: excluido,
-    regras: [
-      {
-        produto_id: item.id_produto_mercos,
-        desconto: desconto,
-      },
-    ],
-  };
-
-  if (id_promocao) {
-    let updated =
-      preco_original == promocaoExists?.preco_original &&
-      preco_promocional == promocaoExists?.preco_promocional &&
-      desconto == promocaoExists?.desconto &&
-      data_inicial == promocaoExists?.data_inicial &&
-      data_final == promocaoExists?.data_final;
-
-    //ja existe a promocao e o preco promocional é o mesmo, nada a fazer
-    if (updated == true && excluido == false) return true;
-
-    //atualizar a promocao
-    return await updatePromocao(id_promocao, item);
-  }
-
-  if (!id_promocao || id_promocao == null) {
-    delete body.excluido; //nao pode enviar o campo excluido na criacao da promocao
-    for (let i = 1; i < MAX_TENTATIVAS; i++) {
-      result = await mercosService.createPromocoes(body);
-      if ((await lib.tratarRetorno(result, 201)) == 201) {
-        item.id_promocao = result?.data?.id;
-        await promocaoRepo.create(item);
-        return true;
-      }
-      await lib.sleep(500);
-    }
-  }
-
-  return null;
 }
 
 // Função para calcular o percentual de desconto
@@ -147,6 +63,11 @@ async function mapperToPromocoes(items) {
     let data_final = null;
     if (p?.dt_promocao_ini) data_inicial = p.dt_promocao_ini;
     if (p?.dt_promocao_fim) data_final = p.dt_promocao_fim;
+
+    if (data_final < new Date()) {
+      console.log("Produto com promocao expirada: ", p.codigo);
+      continue;
+    }
 
     if (
       !id_anuncio_mktplace ||
@@ -253,84 +174,97 @@ async function autoLimpezaPromocoesApiMercos() {
     }
   }
 }
-/*
-  Essa function cruza as promocoes  com os anuncios e verifica se o preco promocional
-  ainda esta vigente, caso o preco promocional seja zero ou nulo, a promocao sera excluida
-  sera executada uma vez ao dia
-*/
-async function autoLimpezaPromocoes() {
-  let promocoes = await getAllPromocoes();
-  if (!Array.isArray(promocoes) || promocoes.length == 0) return;
-  let anuncio = new MpkAnuncio();
-  let preco_promocional = 0;
-
-  for (let promocao of promocoes) {
-    let rows = await anuncio.findAll({ sku: promocao?.sku });
-    for (let row of rows) {
-      preco_promocional = Number(row?.preco_promocional) ?? 0;
-      if (preco_promocional <= 0) {
-        //diminir o dia de hoje para garantir que a promocao sera excluida
-        let hoje = new Date();
-        hoje.setDate(hoje.getDate() - 1);
-        promocao.data_final = hoje;
-        let res = await updatePromocao(promocao?.id_promocao, promocao);
-      }
-    }
-  }
-}
 
 async function getAllPromocoes() {
   const promocaoRepo = new PromocaoRepository();
   return await promocaoRepo.findAll({});
 }
 
-async function updatePromocao(id_promocao, payload) {
-  if (!id_promocao) return null;
+//********************************************************************************** */
+async function getPromocaoVigente() {
+  let filter = { preco_promocional: { $gt: 0 } };
+  const anuncios = new MpkAnuncio();
+  const rows = await anuncios.findAll(filter);
+  const promocao = await mapperToPromocoes(rows);
+  return promocao;
+}
+
+async function setPromocaoVigente() {
+  let promocoes = await getPromocaoVigente();
+  if (!Array.isArray(promocoes) || promocoes.length == 0) return;
   let promocaoRepo = new PromocaoRepository();
-  let result = null;
-  let data_final = new Date(payload.data_final);
-  let excluido = data_final < hoje;
+  //nao pode mudar o nome da promocao
+  let items = await promocaoRepo.findAll({ nome: "Promocao" });
+  let promocaoExists = null;
+  for (let item of items) {
+    promocaoExists = item;
+    break;
+  }
+
+  //data ontem para garantir que a promocao sera atualizada
+  let data_inicial = formatarData(
+    new Date(new Date().setDate(new Date().getDate() - 20))
+  );
+  let data_final = formatarData(
+    new Date(new Date().setMonth(new Date().getMonth() + 2))
+  ); //60 dias a partir de hoje
+
+  const regras = [];
+  for (let p of promocoes) {
+    regras.push({
+      produto_id: p.id_produto_mercos,
+      desconto: p.desconto,
+    });
+  }
 
   let body = {
-    nome: "promocao",
-    data_inicial: formatarData(payload.data_inicial),
-    data_final: formatarData(payload.data_final),
-    excluido: excluido,
-    regras: [
-      {
-        produto_id: payload.id_produto_mercos,
-        desconto: payload.desconto,
-      },
-    ],
+    nome: "Promocao",
+    data_inicial: data_inicial,
+    data_final: data_final,
+    regras: regras,
   };
-  let id = payload.id;
+  let result = null;
+  let id_promocao = promocaoExists?.id ? promocaoExists?.id : null;
 
-  for (let i = 1; i < MAX_TENTATIVAS; i++) {
-    result = await mercosService.updatePromocoes(id_promocao, body);
-    if ((await lib.tratarRetorno(result, 200)) == 200) {
-      //orientação da Mercos que pode mudar
-      payload.id_promocao = result?.data?.id;
+  if (!promocaoExists) {
+    //vamos criar a promocao
+    console.log("Criando nova promocao");
 
-      if (excluido) {
-        await promocaoRepo.delete(id);
-        return true;
-      } else {
-        await promocaoRepo.update(id, payload);
-        return true;
+    for (let i = 1; i < MAX_TENTATIVAS; i++) {
+      result = await mercosService.createPromocoes(body);
+      if ((await lib.tratarRetorno(result, 201)) == 201) {
+        body.id = result?.data?.id;
+        await promocaoRepo.create(body);
+        break;
       }
+      await lib.sleep(500);
     }
-    await lib.sleep(500);
+  } else {
+    //vamos atualizar a promocao
+    console.log("Atualizando promocao existente: ", id_promocao);
+
+    for (let i = 1; i < MAX_TENTATIVAS; i++) {
+      result = await mercosService.updatePromocoes(id_promocao, body);
+      if ((await lib.tratarRetorno(result, 200)) == 200) {
+        //orientação da Mercos que pode mudar
+        body.id = result?.data?.id;
+        body.updatedAt = new Date();
+        await promocaoRepo.update(id_promocao, body);
+        break;
+      }
+      await lib.sleep(500);
+    }
   }
-  //nao conseguiu atualizar a promocao
-  return null;
 }
+
+//********************************************************************************** */
 
 module.exports = {
   init,
   mapperToPromocoes,
   getAllPromocoes,
   getPromocoesByDias,
-  autoLimpezaPromocoes,
   calcularPercentualDesconto,
   inserirFilaPromocao,
+  getPromocaoVigente,
 };
