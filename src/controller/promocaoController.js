@@ -64,8 +64,16 @@ async function mapperToPromocoes(items) {
     if (p?.dt_promocao_ini) data_inicial = p.dt_promocao_ini;
     if (p?.dt_promocao_fim) data_final = p.dt_promocao_fim;
 
-    if (data_final < new Date()) {
-      console.log("Produto com promocao expirada: ", p.codigo);
+    //preciso equiparar os horararios  10-10-2025
+    let hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+
+    if (data_final) {
+      data_final.setHours(0, 0, 0, 0);
+    }
+
+    if (data_final < hoje) {
+      console.log("Produto com promocao expirada: ", p.sku, data_final, hoje);
       continue;
     }
 
