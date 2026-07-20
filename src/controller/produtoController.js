@@ -41,9 +41,19 @@ async function enviarUltimosProdutosMovimentadoSQL() {
 
 async function updateFilaVariacaoEntradaSQL() {
   // Status 1 indica que o item foi enviado para fila de entrada
-  let enviado_fila = 1;
-  let cmd_sql = ` 
-  UPDATE MPK_VARIACAO SET STATUS=${enviado_fila} WHERE STATUS=0
+  // Refatoracao para enviar somente os produtos da integracao ( mercos)
+  let novo_status = 1;
+  let id_integracao = lib.config_id_integracao();
+  let cmd_sql = `
+  UPDATE MPK_VARIACAO V
+  SET V.STATUS = ${novo_status}
+  WHERE V.STATUS = 0
+    AND EXISTS (
+      SELECT 1
+      FROM MPK_ANUNCIO A
+      WHERE A.ID = V.ID_ANUNCIO
+        AND A.ID_INTEGRACAO = ${id_integracao}
+    )
   `;
 
   //Executa o lote de comandos SQL
@@ -52,9 +62,10 @@ async function updateFilaVariacaoEntradaSQL() {
 
 async function updateFilaAnuncioEntradaSQL() {
   // Status 1 indica que o item foi enviado para fila de entrada
-  let enviado_fila = 1;
+  let novo_status = 1;
+  let id_integracao = lib.config_id_integracao();
   let cmd_sql = ` 
-  UPDATE MPK_ANUNCIO SET STATUS=${enviado_fila} WHERE STATUS=0
+  UPDATE MPK_ANUNCIO SET STATUS=${novo_status} WHERE STATUS=0 AND ID_INTEGRACAO = ${id_integracao}
   `;
 
   //Executa o lote de comandos SQL
@@ -311,7 +322,7 @@ async function getAnuncios(
   id_flag = 99,
   id_produto = 0,
   id_anuncio = 0,
-  filter = ""
+  filter = "",
 ) {
   let cmd_sql = `SELECT * FROM MPK_GETANUNCIO(?,?,?,?,?) ${filter}`;
   return await fb5.executeQuery(cmd_sql, [
@@ -331,7 +342,7 @@ async function enviarParaFilaEntrada() {
     99,
     0,
     0,
-    " WHERE STATUS=0 "
+    " WHERE STATUS=0 ",
   );
   console.log("Enviando anuncios para atualizar " + rows?.length);
 
@@ -416,7 +427,7 @@ async function setB2BAnuncio(payload) {
 
   //formatacao campos
   let detalhes_html = String(
-    payload?.detalhes_html ? payload?.detalhes_html : ""
+    payload?.detalhes_html ? payload?.detalhes_html : "",
   );
   detalhes_html = detalhes_html?.substring(0, 5000);
   payload.detalhes_html = detalhes_html;
@@ -428,7 +439,7 @@ async function setB2BAnuncio(payload) {
   } catch (error) {
     console.log(
       "O mapeamento de campos para Mercos retornou com erros.",
-      error?.message
+      error?.message,
     );
   }
 
